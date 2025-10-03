@@ -1,0 +1,38 @@
+{
+  "name": "didcomm-demo-website",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "client": "vite",
+    "server": "node server/index.js",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@aviarytech/did-peer": "^1.1.2",
+    "@digitalcredentials/did-method-key": "^3.0.0",
+    "@noble/ed25519": "^2.1.0",
+    "@noble/hashes": "^2.0.1",
+    "@stablelib/x25519": "^2.0.1",
+    "axios": "^1.6.0",
+    "bs58": "^6.0.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "express-session": "^1.18.2",
+    "html5-qrcode": "^2.3.8",
+    "qrcode": "^1.5.0",
+    "sql.js": "^1.13.0",
+    "varint": "^6.0.0",
+    "vue": "^3.4.0",
+    "vue-router": "^4.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^4.0.0",
+    "concurrently": "^9.2.1",
+    "vite": "^4.0.0",
+    "vite-plugin-mkcert": "^1.17.8"
+  }
+}
