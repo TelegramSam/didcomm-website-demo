@@ -53,7 +53,7 @@ async function generateMobileDID() {
   const encKeys = generateX25519KeyPair();
 
   // Create DID Document
-  const didDocument: any = {
+  const inputDocument: any = {
     verificationMethod: [
       {
         id: '#key-1',
@@ -71,8 +71,8 @@ async function generateMobileDID() {
   };
 
   // Generate the DID using peer4 library
-  const longFormDid = await peer4.encode(didDocument);
-  const resolvedDocument = await peer4.resolve(longFormDid);
+  const longFormDid = peer4.encode(inputDocument);
+  const resolvedDocument = peer4.resolve(longFormDid);
 
   // Store private keys
   const privateKeyData: any = {
