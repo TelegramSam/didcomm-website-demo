@@ -1,6 +1,6 @@
 import initSqlJs from 'sql.js';
 import * as peer4 from '../lib/peer4';
-import bs58 from 'bs58';
+import { toMultibaseB58 } from '../lib/multiformats';
 
 let db: any = null;
 
@@ -44,11 +44,6 @@ function saveDatabase() {
     const buffer = JSON.stringify(Array.from(data));
     localStorage.setItem('didcomm_db', buffer);
   }
-}
-
-// Convert bytes to multibase base58btc format
-function bytesToMultibase(bytes: Uint8Array): string {
-  return 'z' + bs58.encode(bytes);
 }
 
 // Generate Ed25519 key pair for authentication using Web Crypto API
@@ -100,12 +95,12 @@ export async function generateDID() {
       {
         id: '#key-1',
         type: 'Ed25519VerificationKey2020',
-        publicKeyMultibase: bytesToMultibase(authKeys.publicKey)
+        publicKeyMultibase: toMultibaseB58(authKeys.publicKey)
       },
       {
         id: '#key-2',
         type: 'X25519KeyAgreementKey2020',
-        publicKeyMultibase: bytesToMultibase(encKeys.publicKey)
+        publicKeyMultibase: toMultibaseB58(encKeys.publicKey)
       }
     ],
     authentication: ['#key-1'],
@@ -130,13 +125,13 @@ export async function generateDID() {
     'key-1': {
       id: '#key-1',
       type: 'Ed25519VerificationKey2020',
-      publicKeyMultibase: bytesToMultibase(authKeys.publicKey),
+      publicKeyMultibase: toMultibaseB58(authKeys.publicKey),
       privateKeyBytes: Array.from(authKeys.privateKey)
     },
     'key-2': {
       id: '#key-2',
       type: 'X25519KeyAgreementKey2020',
-      publicKeyMultibase: bytesToMultibase(encKeys.publicKey),
+      publicKeyMultibase: toMultibaseB58(encKeys.publicKey),
       privateKeyBytes: Array.from(encKeys.privateKey)
     }
   };
