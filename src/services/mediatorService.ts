@@ -1,5 +1,6 @@
 // Indicio Public Mediator Service
-import { saveMobileDID, getMobileDID, saveConnection } from './mobileStorage';
+import { saveMobileDID, getMobileDID, saveConnection, saveMessage } from './mobileStorage';
+// import { packMessage, addKnownDID } from './didcommService'; // Temporarily disabled due to WASM loading issues
 import * as peer4 from '../lib/peer4';
 import bs58 from 'bs58';
 
@@ -52,7 +53,7 @@ async function generateMobileDID() {
   // Generate X25519 key pair for encryption
   const encKeys = generateX25519KeyPair();
 
-  // Create DID Document
+  // Create DID Document with DIDComm v2 service endpoint
   const inputDocument: any = {
     verificationMethod: [
       {
@@ -67,7 +68,16 @@ async function generateMobileDID() {
       }
     ],
     authentication: ['#key-1'],
-    keyAgreement: ['#key-2']
+    keyAgreement: ['#key-2'],
+    service: [
+      {
+        id: '#didcomm',
+        type: 'DIDCommMessaging',
+        serviceEndpoint: MEDIATOR_CONFIG.endpoint,
+        accept: ['didcomm/v2'],
+        routingKeys: [MEDIATOR_CONFIG.did]
+      }
+    ]
   };
 
   // Generate the DID using peer4 library
@@ -110,7 +120,24 @@ async function sendMediationRequest(myDid: string) {
 
   console.log('Sending mediation request:', mediationRequest);
 
+  // Log outgoing message
+  saveMessage({
+    direction: 'outbound',
+    type: mediationRequest.type,
+    messageId: mediationRequest.id,
+    from: mediationRequest.from,
+    to: mediationRequest.to,
+    body: mediationRequest.body,
+    message: mediationRequest,
+    status: 'sent',
+    timestamp: new Date().toISOString()
+  });
+
   try {
+    // TODO: Encrypt the message using DIDComm v2 once WASM loading is resolved
+    // For now, sending as plaintext
+    console.log('Sending mediation request (plaintext)...');
+
     const response = await fetch(MEDIATOR_CONFIG.endpoint, {
       method: 'POST',
       headers: {
@@ -122,13 +149,55 @@ async function sendMediationRequest(myDid: string) {
     if (response.ok) {
       const result = await response.json();
       console.log('Mediation response:', result);
+
+      // Log incoming response
+      saveMessage({
+        direction: 'inbound',
+        type: result.type || 'mediation-response',
+        messageId: result.id || crypto.randomUUID(),
+        from: result.from || MEDIATOR_CONFIG.did,
+        to: result.to || [myDid],
+        body: result.body || result,
+        message: result,
+        status: 'received',
+        timestamp: new Date().toISOString()
+      });
+
       return result;
     } else {
       console.error('Mediation request failed:', response.status, response.statusText);
+
+      // Log failed response
+      saveMessage({
+        direction: 'inbound',
+        type: 'error',
+        messageId: crypto.randomUUID(),
+        from: MEDIATOR_CONFIG.did,
+        to: [myDid],
+        body: { error: `HTTP ${response.status}: ${response.statusText}` },
+        message: null,
+        status: 'error',
+        timestamp: new Date().toISOString()
+      });
+
       return null;
     }
   } catch (error) {
     console.error('Error sending mediation request:', error);
+
+    // Log error
+    saveMessage({
+      direction: 'outbound',
+      type: 'error',
+      messageId: crypto.randomUUID(),
+      from: myDid,
+      to: [MEDIATOR_CONFIG.did],
+      body: { error: String(error) },
+      message: null,
+      status: 'error',
+      timestamp: new Date().toISOString()
+    });
+
     return null;
   }
 }

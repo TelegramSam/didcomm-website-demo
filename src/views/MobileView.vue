@@ -13,19 +13,26 @@
         </p>
         <p>Connections: {{ storageStats.connections }} | Messages: {{ storageStats.messages }}</p>
       </div>
-      <button @click="handleResetAll" class="reset-all-button">
-        Reset All
-      </button>
+      <div class="button-group">
+        <button @click="goToAdvanced" class="advanced-button">
+          Advanced
+        </button>
+        <button @click="handleResetAll" class="reset-all-button">
+          Reset All
+        </button>
+      </div>
     </footer>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import QrScanner from '../components/QrScanner.vue';
 import { resetAllData, getStorageStats } from '../services/mobileStorage';
 import { connectToMediator, getMediatorStatus } from '../services/mediatorService';
 
+const router = useRouter();
 const storageStats = ref({ connections: 0, messages: 0, hasDID: false });
 const mediatorStatus = ref('Not connected');
 const isConnectingToMediator = ref(false);
@@ -43,6 +50,10 @@ const updateStats = () => {
 const handleConnectionCreated = (connection) => {
   console.log('Connection created:', connection);
   updateStats();
+};
+
+const goToAdvanced = () => {
+  router.push('/mobile/advanced');
 };
 
 const handleResetAll = () => {
@@ -125,17 +136,44 @@ footer {
   color: #666;
 }
 
-.reset-all-button {
-  background: #dc3545;
+.button-group {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 400px;
+}
+
+.advanced-button {
+  background: #007bff;
   color: white;
   border: none;
-  padding: 0.75rem 2rem;
+  padding: 0.75rem 1.5rem;
   border-radius: 0.5rem;
   cursor: pointer;
   font-size: 1rem;
   font-weight: 600;
-  width: 100%;
-  max-width: 300px;
+  flex: 1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.advanced-button:hover {
+  background: #0056b3;
+}
+
+.advanced-button:active {
+  transform: scale(0.98);
+}
+
+.reset-all-button {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  flex: 1;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 

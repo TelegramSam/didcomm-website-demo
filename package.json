@@ -21,6 +21,8 @@
     "bs58": "^6.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
+    "didcomm": "^0.4.1",
+    "didcomm-node": "^0.4.1",
     "express": "^5.1.0",
     "express-session": "^1.18.2",
     "html5-qrcode": "^2.3.8",
@@ -32,10 +34,12 @@
   },
   "devDependencies": {
     "@types/sql.js": "^1.4.9",
-    "@vitejs/plugin-vue": "^4.0.0",
+    "@vitejs/plugin-vue": "^4.6.2",
     "concurrently": "^9.2.1",
     "prettier": "^3.6.2",
-    "vite": "^4.0.0",
-    "vite-plugin-mkcert": "^1.17.8"
+    "vite": "^4.5.14",
+    "vite-plugin-mkcert": "^1.17.8",
+    "vite-plugin-top-level-await": "^1.6.0",
+    "vite-plugin-wasm": "^3.5.0"
   }
 }

@@ -1,6 +1,8 @@
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import mkcert from 'vite-plugin-mkcert';
+import wasm from 'vite-plugin-wasm';
+import topLevelAwait from 'vite-plugin-top-level-await';
 
 // Plugin to handle /didcomm endpoint
 const didcommPlugin = () => ({
@@ -38,9 +40,10 @@ const didcommPlugin = () => ({
 });
 
 export default defineConfig({
-  plugins: [vue(), mkcert(), didcommPlugin()],
+  plugins: [wasm(), topLevelAwait(), vue(), mkcert(), didcommPlugin()],
   server: {
     https: true,
+    host: '0.0.0.0', // Listen on all network interfaces
     port: 5173,
     strictPort: true,
     proxy: {

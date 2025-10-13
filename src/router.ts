@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import DesktopView from './views/DesktopView.vue';
 import MobileView from './views/MobileView.vue';
+import AdvancedView from './views/AdvancedView.vue';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -14,6 +15,11 @@ const router = createRouter({
       path: '/mobile',
       name: 'mobile',
       component: MobileView
+    },
+    {
+      path: '/mobile/advanced',
+      name: 'advanced',
+      component: AdvancedView
     }
   ]
 });
