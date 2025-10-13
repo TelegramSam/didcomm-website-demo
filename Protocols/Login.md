@@ -68,6 +68,7 @@ The QR code encodes a URL containing an Out-of-Band invitation with the followin
 ```
 
 **URL Format**: The invitation is encoded as a URL parameter:
+
 ```
 https://example.com/login?_oob={url-encoded-invitation-json}
 ```
@@ -75,6 +76,7 @@ https://example.com/login?_oob={url-encoded-invitation-json}
 ### Goal Code
 
 The `goal_code` field MUST be set to `"login"` to indicate this invitation is for website authentication. This allows wallets to:
+
 - Recognize the invitation as a login request
 - Apply appropriate security policies
 - Display relevant UI to the user (e.g., "Login to website")
@@ -139,6 +141,7 @@ Sent by the wallet to initiate the login process after scanning the QR code.
 ```
 
 **Field Descriptions**:
+
 - `from`: The wallet's newly created DID for this connection
 - `to`: The website's DID from the scanned QR code
 - `session_token`: (Optional) JWT or session token from a previous session for reconnection
@@ -162,6 +165,7 @@ Sent by the website to confirm the authenticated session has been established.
 ```
 
 **Field Descriptions**:
+
 - `thid`: Thread ID referencing the original session-login message ID
 
 ## Protocol Flow
@@ -202,6 +206,7 @@ Sent by the website to confirm the authenticated session has been established.
 ## Security Considerations
 
 ### DID Authentication
+
 - Wallets MUST create a unique DID for each website connection to prevent correlation
 - Websites MUST verify that the `from` DID in the session-login message is valid and properly formatted
 - Both parties SHOULD use did:peer:4 long-form DIDs for enhanced security and offline resolution
@@ -209,24 +214,28 @@ Sent by the website to confirm the authenticated session has been established.
 - The encrypted nature of DIDComm messages provides authentication through the encryption itself
 
 ### Session Management
+
 - Session tokens SHOULD use JWT format with appropriate expiration times
 - Websites SHOULD implement session timeout and renewal mechanisms
 - Session tokens MUST be transmitted over encrypted channels only
 - Websites SHOULD allow users to view and revoke active sessions
 
 ### Privacy Protection
+
 - Profile information sharing MUST be optional and user-controlled
 - Websites SHOULD only request the minimum necessary user information
 - Wallets SHOULD allow users to create pseudonymous profiles for each connection
 - Connection DIDs SHOULD NOT be reused across different websites
 
 ### Message Security
+
 - All messages MUST be encrypted using DIDComm encryption
 - Messages SHOULD include `created_time` to prevent replay attacks
 - Websites SHOULD validate message timestamps and reject stale messages
 - Both parties SHOULD implement message ordering and duplicate detection
 
 ### QR Code Security
+
 - QR codes SHOULD include the website's DID and optionally additional context
 - Websites MAY include a session ID or nonce in the QR code URL to track login attempts
 - QR codes SHOULD be regenerated periodically if they include session-specific data
@@ -235,6 +244,7 @@ Sent by the website to confirm the authenticated session has been established.
 ## Implementation Notes
 
 ### QR Code Generation
+
 - QR codes SHOULD encode the website's DID, optionally as a URL with an Out-of-Band invitation
 - Format: `https://example.com/login?_oob={url-encoded-invitation-json}` where the invitation contains the website's DID
 - Alternative format: Direct DID encoding in QR code for simpler implementations
@@ -242,18 +252,21 @@ Sent by the website to confirm the authenticated session has been established.
 - Websites MAY refresh QR codes periodically for enhanced security
 
 ### Mediator Support
+
 - Wallets SHOULD register new connection DIDs with their configured mediator
 - Websites SHOULD support receiving messages through mediators
 - Mediator endpoints MUST support DIDComm v2 message forwarding
 - Wallets MAY use different mediators for different connections
 
 ### Session Establishment
+
 - Websites SHOULD provide both session tokens and redirect URLs
 - Mobile wallets SHOULD support deep linking to return to the website
 - Desktop websites SHOULD auto-refresh to complete the login
 - Websites SHOULD provide visual feedback during the authentication process
 
 ### Error Handling
+
 - Both parties SHOULD implement timeout handling for each protocol state
 - Wallets SHOULD provide clear error messages to users
 - Websites SHOULD log authentication failures for security monitoring
@@ -262,6 +275,7 @@ Sent by the website to confirm the authenticated session has been established.
 ## Extensibility
 
 ### Optional Features
+
 Implementations MAY extend this protocol with additional features:
 
 - **Challenge-response authentication**: Adding an additional challenge step for enhanced security
@@ -271,6 +285,7 @@ Implementations MAY extend this protocol with additional features:
 - **Social recovery**: Allowing account recovery through trusted contacts
 
 ### Custom Fields
+
 Implementations MAY add custom fields to message bodies using namespaced keys:
 
 ```json

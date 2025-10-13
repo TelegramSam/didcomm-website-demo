@@ -110,10 +110,7 @@ export function resolveShort(did: string): Document {
  * @returns The DID document.
  * @throws If the provided DID does not match the calculated short-form DID.
  */
-export function resolveShortFromDoc(
-  document: Document,
-  did: string | null
-): Document {
+export function resolveShortFromDoc(document: Document, did: string | null): Document {
   const longForm = encode(document)
   if (did !== null) {
     const shortForm = longToShort(longForm)

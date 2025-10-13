@@ -1,53 +1,53 @@
 // DIDComm message encryption/decryption service for browser
-import { Message } from 'didcomm';
-import { getMobileDID } from './mobileStorage';
-import * as peer4 from '../lib/peer4';
+import { Message } from 'didcomm'
+import { getMobileDID } from './mobileStorage'
+import * as peer4 from '../lib/peer4'
 
 // DID Resolver for client-side
 class ClientDIDResolver {
-  private knownDIDs: Map<string, any> = new Map();
+  private knownDIDs: Map<string, any> = new Map()
 
   constructor() {}
 
   addDID(did: string, didDocument: any) {
-    this.knownDIDs.set(did, didDocument);
+    this.knownDIDs.set(did, didDocument)
   }
 
   async resolve(did: string): Promise<any> {
-    console.log('Resolving DID:', did);
+    console.log('Resolving DID:', did)
 
     // Check if we have it locally
     if (this.knownDIDs.has(did)) {
-      return this.knownDIDs.get(did);
+      return this.knownDIDs.get(did)
     }
 
     // For did:key, resolve locally
     if (did.startsWith('did:key:')) {
-      return this.resolveDIDKey(did);
+      return this.resolveDIDKey(did)
     }
 
     // For did:peer:4, try to decode long-form
     if (did.startsWith('did:peer:4')) {
       try {
         if (peer4.LONG_RE.test(did)) {
-          return peer4.resolve(did);
+          return peer4.resolve(did)
         } else {
-          console.warn('Cannot resolve short-form did:peer:4 without document');
-          return null;
+          console.warn('Cannot resolve short-form did:peer:4 without document')
+          return null
         }
       } catch (error) {
-        console.error('Error resolving did:peer:', error);
-        return null;
+        console.error('Error resolving did:peer:', error)
+        return null
       }
     }
 
-    console.warn('Unable to resolve DID:', did);
-    return null;
+    console.warn('Unable to resolve DID:', did)
+    return null
   }
 
   // Simple did:key resolver for X25519 and Ed25519
   resolveDIDKey(did: string): any {
-    const keyId = did.replace('did:key:', '');
+    const keyId = did.replace('did:key:', '')
 
     // This is a simplified resolver - in production, you'd need to properly
     // decode the multicodec prefix to determine key type
@@ -67,65 +67,65 @@ class ClientDIDResolver {
         }
       ],
       keyAgreement: [`${did}#${keyId}`]
-    };
+    }
 
-    return didDocument;
+    return didDocument
   }
 }
 
 // Secrets Resolver for client-side
 class ClientSecretsResolver {
-  private secrets: Map<string, any> = new Map();
+  private secrets: Map<string, any> = new Map()
 
   constructor() {
     // Load mobile DID keys
-    this.loadMobileKeys();
+    this.loadMobileKeys()
   }
 
   loadMobileKeys() {
-    const mobileDID = getMobileDID();
+    const mobileDID = getMobileDID()
     if (!mobileDID || !mobileDID.privateKeys) {
-      console.warn('No mobile DID keys found');
-      return;
+      console.warn('No mobile DID keys found')
+      return
     }
 
     // Add all private keys from mobile DID
     for (const [keyId, keyData] of Object.entries(mobileDID.privateKeys)) {
-      const fullKeyId = `${mobileDID.did}${keyData.id}`;
+      const fullKeyId = `${mobileDID.did}${keyData.id}`
       this.secrets.set(fullKeyId, {
         id: fullKeyId,
         type: keyData.type,
         privateKeyMultibase: keyData.publicKeyMultibase, // Note: This should be private key
         privateKeyBytes: keyData.privateKeyBytes
-      });
-      console.log('Loaded secret key:', fullKeyId);
+      })
+      console.log('Loaded secret key:', fullKeyId)
     }
   }
 
   addSecret(keyId: string, secret: any) {
-    this.secrets.set(keyId, secret);
+    this.secrets.set(keyId, secret)
   }
 
   async get_secret(keyId: string): Promise<any> {
-    console.log('Retrieving secret for key:', keyId);
-    const secret = this.secrets.get(keyId);
+    console.log('Retrieving secret for key:', keyId)
+    const secret = this.secrets.get(keyId)
 
     if (!secret) {
-      console.warn('Secret not found for key:', keyId);
-      return null;
+      console.warn('Secret not found for key:', keyId)
+      return null
     }
 
-    return secret;
+    return secret
   }
 }
 
 // Create global instances
-const didResolver = new ClientDIDResolver();
-const secretsResolver = new ClientSecretsResolver();
+const didResolver = new ClientDIDResolver()
+const secretsResolver = new ClientSecretsResolver()
 
 // Add a DID document to the resolver
 export function addKnownDID(did: string, didDocument: any) {
-  didResolver.addDID(did, didDocument);
+  didResolver.addDID(did, didDocument)
 }
 
 // Pack (encrypt) a DIDComm message
@@ -136,29 +136,29 @@ export async function packMessage(
   signFrom?: string
 ): Promise<string> {
   try {
-    console.log('Packing DIDComm message...');
-    console.log('To:', to);
-    console.log('From:', from);
+    console.log('Packing DIDComm message...')
+    console.log('To:', to)
+    console.log('From:', from)
 
     // Get the mobile DID if from is not specified
     if (!from) {
-      const mobileDID = getMobileDID();
+      const mobileDID = getMobileDID()
       if (!mobileDID) {
-        throw new Error('No mobile DID found');
+        throw new Error('No mobile DID found')
       }
-      from = mobileDID.did;
+      from = mobileDID.did
     }
 
     // Ensure the recipient DID is known
-    const recipientDoc = await didResolver.resolve(to);
+    const recipientDoc = await didResolver.resolve(to)
     if (!recipientDoc) {
-      throw new Error(`Cannot resolve recipient DID: ${to}`);
+      throw new Error(`Cannot resolve recipient DID: ${to}`)
     }
 
     // Create Message instance
-    const msg = new Message(plainMessage);
+    const msg = new Message(plainMessage)
 
-    console.log('Encrypting message to:', to);
+    console.log('Encrypting message to:', to)
 
     // Pack encrypted message
     const [packedMessage, metadata] = await msg.pack_encrypted(
@@ -170,44 +170,46 @@ export async function packMessage(
       {
         forward: false
       }
-    );
+    )
 
-    console.log('Message packed successfully');
-    console.log('Metadata:', metadata);
+    console.log('Message packed successfully')
+    console.log('Metadata:', metadata)
 
-    return packedMessage;
+    return packedMessage
   } catch (error) {
-    console.error('Error packing message:', error);
-    throw new Error(`Failed to pack DIDComm message: ${error.message || error}`);
+    console.error('Error packing message:', error)
+    throw new Error(`Failed to pack DIDComm message: ${error.message || error}`)
   }
 }
 
 // Unpack (decrypt) a DIDComm message
-export async function unpackMessage(packedMessage: string): Promise<{ message: any; metadata: any }> {
+export async function unpackMessage(
+  packedMessage: string
+): Promise<{ message: any; metadata: any }> {
   try {
-    console.log('Unpacking DIDComm message...');
+    console.log('Unpacking DIDComm message...')
 
     // Reload secrets in case keys were updated
-    secretsResolver.loadMobileKeys();
+    secretsResolver.loadMobileKeys()
 
     const [message, metadata] = await Message.unpack(
       packedMessage,
       didResolver,
       secretsResolver,
       {}
-    );
+    )
 
-    console.log('Message unpacked successfully');
-    console.log('Metadata:', metadata);
+    console.log('Message unpacked successfully')
+    console.log('Metadata:', metadata)
 
     return {
       message: message.as_value(),
       metadata
-    };
+    }
   } catch (error) {
-    console.error('Error unpacking message:', error);
-    throw new Error(`Failed to unpack DIDComm message: ${error.message || error}`);
+    console.error('Error unpacking message:', error)
+    throw new Error(`Failed to unpack DIDComm message: ${error.message || error}`)
   }
 }
 
-export { didResolver, secretsResolver };
+export { didResolver, secretsResolver }

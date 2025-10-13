@@ -8,86 +8,82 @@
     </main>
     <footer>
       <div class="storage-info">
-        <p class="mediator-status" :class="{ 'connecting': isConnectingToMediator }">
+        <p class="mediator-status" :class="{ connecting: isConnectingToMediator }">
           {{ mediatorStatus }}
         </p>
         <p>Connections: {{ storageStats.connections }} | Messages: {{ storageStats.messages }}</p>
       </div>
       <div class="button-group">
-        <button @click="goToAdvanced" class="advanced-button">
-          Advanced
-        </button>
-        <button @click="handleResetAll" class="reset-all-button">
-          Reset All
-        </button>
+        <button @click="goToAdvanced" class="advanced-button">Advanced</button>
+        <button @click="handleResetAll" class="reset-all-button">Reset All</button>
       </div>
     </footer>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import QrScanner from '../components/QrScanner.vue';
-import { resetAllData, getStorageStats } from '../services/mobileStorage';
-import { connectToMediator, getMediatorStatus } from '../services/mediatorService';
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import QrScanner from '../components/QrScanner.vue'
+import { resetAllData, getStorageStats } from '../services/mobileStorage'
+import { connectToMediator, getMediatorStatus } from '../services/mediatorService'
 
-const router = useRouter();
-const storageStats = ref({ connections: 0, messages: 0, hasDID: false });
-const mediatorStatus = ref('Not connected');
-const isConnectingToMediator = ref(false);
+const router = useRouter()
+const storageStats = ref({ connections: 0, messages: 0, hasDID: false })
+const mediatorStatus = ref('Not connected')
+const isConnectingToMediator = ref(false)
 
 const updateStats = () => {
-  storageStats.value = getStorageStats();
+  storageStats.value = getStorageStats()
 
   // Update mediator status
-  const status = getMediatorStatus();
+  const status = getMediatorStatus()
   if (status) {
-    mediatorStatus.value = `Connected to ${status.label}`;
+    mediatorStatus.value = `Connected to ${status.label}`
   }
-};
+}
 
-const handleConnectionCreated = (connection) => {
-  console.log('Connection created:', connection);
-  updateStats();
-};
+const handleConnectionCreated = connection => {
+  console.log('Connection created:', connection)
+  updateStats()
+}
 
 const goToAdvanced = () => {
-  router.push('/mobile/advanced');
-};
+  router.push('/mobile/advanced')
+}
 
 const handleResetAll = () => {
   if (confirm('Are you sure you want to delete all data? This cannot be undone.')) {
-    resetAllData();
-    updateStats();
-    mediatorStatus.value = 'Not connected';
-    alert('All data has been deleted.');
+    resetAllData()
+    updateStats()
+    mediatorStatus.value = 'Not connected'
+    alert('All data has been deleted.')
     // Reconnect to mediator after reset
-    initializeMediator();
+    initializeMediator()
   }
-};
+}
 
 const initializeMediator = async () => {
-  isConnectingToMediator.value = true;
-  mediatorStatus.value = 'Connecting to mediator...';
+  isConnectingToMediator.value = true
+  mediatorStatus.value = 'Connecting to mediator...'
 
-  const result = await connectToMediator();
+  const result = await connectToMediator()
 
-  isConnectingToMediator.value = false;
+  isConnectingToMediator.value = false
 
   if (result.success) {
-    console.log('Successfully connected to mediator');
-    updateStats();
+    console.log('Successfully connected to mediator')
+    updateStats()
   } else {
-    console.error('Failed to connect to mediator:', result.error);
-    mediatorStatus.value = 'Connection failed';
+    console.error('Failed to connect to mediator:', result.error)
+    mediatorStatus.value = 'Connection failed'
   }
-};
+}
 
 onMounted(() => {
-  updateStats();
-  initializeMediator();
-});
+  updateStats()
+  initializeMediator()
+})
 </script>
 
 <style scoped>
