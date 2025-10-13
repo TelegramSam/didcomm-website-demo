@@ -8,7 +8,9 @@
     "client": "vite",
     "server": "node server/index.js",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "format": "prettier --write \"**/*.{ts,js,vue,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,js,vue,json,md,yml,yaml}\""
   },
   "dependencies": {
     "@aviarytech/did-peer": "^1.1.2",
