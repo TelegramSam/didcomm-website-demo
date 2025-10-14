@@ -38,51 +38,51 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import QrCodeDisplay from '../components/QrCodeDisplay.vue';
-import { getOrCreateDID, deleteDID, generateDID } from '../services/didService';
-import QRCode from 'qrcode';
+import { ref, onMounted } from 'vue'
+import QrCodeDisplay from '../components/QrCodeDisplay.vue'
+import { getOrCreateDID, deleteDID, generateDID } from '../services/didService'
+import QRCode from 'qrcode'
 
-const didInfo = ref(null);
-const loading = ref(true);
-const mobileQrCanvas = ref(null);
+const didInfo = ref(null)
+const loading = ref(true)
+const mobileQrCanvas = ref(null)
 
 const loadDID = async () => {
-  loading.value = true;
+  loading.value = true
   try {
-    const result = await getOrCreateDID();
-    didInfo.value = result;
+    const result = await getOrCreateDID()
+    didInfo.value = result
   } catch (error) {
-    console.error('Failed to load DID:', error);
-    didInfo.value = null;
+    console.error('Failed to load DID:', error)
+    didInfo.value = null
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-};
+}
 
 const resetDID = async () => {
   if (confirm('Are you sure you want to delete and recreate your DID? This cannot be undone.')) {
-    loading.value = true;
+    loading.value = true
     try {
-      await deleteDID();
-      const result = await generateDID();
-      didInfo.value = result;
+      await deleteDID()
+      const result = await generateDID()
+      didInfo.value = result
     } catch (error) {
-      console.error('Failed to reset DID:', error);
+      console.error('Failed to reset DID:', error)
     } finally {
-      loading.value = false;
+      loading.value = false
     }
   }
-};
+}
 
-const formatDate = (dateStr) => {
-  if (!dateStr) return 'Just now';
-  return new Date(dateStr).toLocaleString();
-};
+const formatDate = dateStr => {
+  if (!dateStr) return 'Just now'
+  return new Date(dateStr).toLocaleString()
+}
 
 const generateMobileQR = () => {
   if (mobileQrCanvas.value) {
-    const mobileUrl = `${window.location.protocol}//${window.location.host}/mobile`;
+    const mobileUrl = `${window.location.protocol}//${window.location.host}/mobile`
     QRCode.toCanvas(mobileQrCanvas.value, mobileUrl, {
       width: 250,
       margin: 2,
@@ -90,14 +90,14 @@ const generateMobileQR = () => {
         dark: '#000000',
         light: '#ffffff'
       }
-    });
+    })
   }
-};
+}
 
 onMounted(() => {
-  loadDID();
-  generateMobileQR();
-});
+  loadDID()
+  generateMobileQR()
+})
 </script>
 
 <style scoped>
@@ -143,7 +143,8 @@ main {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.info-panel h2, .info-panel h3 {
+.info-panel h2,
+.info-panel h3 {
   margin-top: 0;
   color: #333;
 }
@@ -248,7 +249,8 @@ main {
   background: #c82333;
 }
 
-.loading-state, .error-state {
+.loading-state,
+.error-state {
   padding: 1rem;
   text-align: center;
 }

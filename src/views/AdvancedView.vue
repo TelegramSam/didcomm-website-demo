@@ -1,9 +1,7 @@
 <template>
   <div class="advanced-view">
     <header>
-      <button @click="goBack" class="back-button">
-        ← Back
-      </button>
+      <button @click="goBack" class="back-button">← Back</button>
       <h1>Advanced Settings</h1>
     </header>
 
@@ -13,9 +11,7 @@
         <div v-if="mobileDID" class="did-container">
           <div class="did-header">
             <h3>{{ mobileDID.did }}</h3>
-            <button @click="copyToClipboard(mobileDID.did)" class="copy-button">
-              Copy
-            </button>
+            <button @click="copyToClipboard(mobileDID.did)" class="copy-button">Copy</button>
           </div>
 
           <div class="info-item">
@@ -23,9 +19,16 @@
             <span class="value">{{ formatDate(mobileDID.createdAt) }}</span>
           </div>
 
-          <div v-if="mobileDID.didDocument.service && mobileDID.didDocument.service.length > 0" class="service-endpoints">
+          <div
+            v-if="mobileDID.didDocument.service && mobileDID.didDocument.service.length > 0"
+            class="service-endpoints"
+          >
             <h4>DIDComm Service Endpoints</h4>
-            <div v-for="(service, idx) in mobileDID.didDocument.service" :key="idx" class="service-item">
+            <div
+              v-for="(service, idx) in mobileDID.didDocument.service"
+              :key="idx"
+              class="service-item"
+            >
               <div class="service-header">
                 <span class="service-type">{{ service.type }}</span>
                 <span class="service-id">{{ service.id }}</span>
@@ -153,7 +156,12 @@
       <section class="section message-log-section">
         <h2>Message Log</h2>
         <div v-if="messages.length > 0" class="message-log-container">
-          <div v-for="msg in messages" :key="msg.id" class="message-log-item" :class="msg.direction">
+          <div
+            v-for="msg in messages"
+            :key="msg.id"
+            class="message-log-item"
+            :class="msg.direction"
+          >
             <div class="message-header">
               <div class="message-direction">
                 <span class="direction-badge" :class="msg.direction">
@@ -194,73 +202,73 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import { getMobileDID, getConnections, getMessages } from '../services/mobileStorage';
-import { getMediatorStatus } from '../services/mediatorService';
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { getMobileDID, getConnections, getMessages } from '../services/mobileStorage'
+import { getMediatorStatus } from '../services/mediatorService'
 
-const router = useRouter();
-const mobileDID = ref(null);
-const mediatorConnection = ref(null);
-const connections = ref([]);
-const messages = ref([]);
+const router = useRouter()
+const mobileDID = ref(null)
+const mediatorConnection = ref(null)
+const connections = ref([])
+const messages = ref([])
 
 const goBack = () => {
-  router.push('/mobile');
-};
+  router.push('/mobile')
+}
 
-const formatDate = (dateString) => {
-  if (!dateString) return 'N/A';
-  return new Date(dateString).toLocaleString();
-};
+const formatDate = dateString => {
+  if (!dateString) return 'N/A'
+  return new Date(dateString).toLocaleString()
+}
 
-const formatTime = (dateString) => {
-  if (!dateString) return 'N/A';
-  const date = new Date(dateString);
-  return date.toLocaleTimeString() + ' ' + date.toLocaleDateString();
-};
+const formatTime = dateString => {
+  if (!dateString) return 'N/A'
+  const date = new Date(dateString)
+  return date.toLocaleTimeString() + ' ' + date.toLocaleDateString()
+}
 
-const formatJSON = (obj) => {
-  return JSON.stringify(obj, null, 2);
-};
+const formatJSON = obj => {
+  return JSON.stringify(obj, null, 2)
+}
 
-const formatMessageType = (type) => {
-  if (!type) return 'Unknown';
-  const parts = type.split('/');
-  return parts[parts.length - 1] || type;
-};
+const formatMessageType = type => {
+  if (!type) return 'Unknown'
+  const parts = type.split('/')
+  return parts[parts.length - 1] || type
+}
 
-const formatRecipients = (to) => {
-  if (!to) return 'Unknown';
+const formatRecipients = to => {
+  if (!to) return 'Unknown'
   if (Array.isArray(to)) {
-    return to.join(', ');
+    return to.join(', ')
   }
-  return String(to);
-};
+  return String(to)
+}
 
-const copyToClipboard = async (text) => {
+const copyToClipboard = async text => {
   try {
-    await navigator.clipboard.writeText(text);
-    alert('Copied to clipboard!');
+    await navigator.clipboard.writeText(text)
+    alert('Copied to clipboard!')
   } catch (err) {
-    console.error('Failed to copy:', err);
-    alert('Failed to copy to clipboard');
+    console.error('Failed to copy:', err)
+    alert('Failed to copy to clipboard')
   }
-};
+}
 
 const loadData = () => {
-  mobileDID.value = getMobileDID();
-  mediatorConnection.value = getMediatorStatus();
-  connections.value = getConnections();
+  mobileDID.value = getMobileDID()
+  mediatorConnection.value = getMediatorStatus()
+  connections.value = getConnections()
 
   // Load messages in reverse chronological order (newest first)
-  const allMessages = getMessages();
-  messages.value = allMessages.reverse();
-};
+  const allMessages = getMessages()
+  messages.value = allMessages.reverse()
+}
 
 onMounted(() => {
-  loadData();
-});
+  loadData()
+})
 </script>
 
 <style scoped>

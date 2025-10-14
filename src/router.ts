@@ -1,7 +1,7 @@
-import { createRouter, createWebHistory } from 'vue-router';
-import DesktopView from './views/DesktopView.vue';
-import MobileView from './views/MobileView.vue';
-import AdvancedView from './views/AdvancedView.vue';
+import { createRouter, createWebHistory } from 'vue-router'
+import DesktopView from './views/DesktopView.vue'
+import MobileView from './views/MobileView.vue'
+import AdvancedView from './views/AdvancedView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -22,6 +22,6 @@ const router = createRouter({
       component: AdvancedView
     }
   ]
-});
+})
 
-export default router;
+export default router

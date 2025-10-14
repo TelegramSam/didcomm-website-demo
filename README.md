@@ -5,6 +5,7 @@
 A simple QR code scanning web application for DIDComm v2 decentralized identity communication. This is a single-page Vue.js application with client-side DIDComm processing.
 
 ## Features
+
 - Vue.js single-page application
 - QR code scanning capabilities
 - Client-side DIDComm v2 message handling

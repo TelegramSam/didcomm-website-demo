@@ -1,24 +1,24 @@
-import initSqlJs from 'sql.js';
-import * as peer4 from '../lib/peer4';
-import { toMultibaseB58 } from '../lib/multiformats';
+import initSqlJs from 'sql.js'
+import * as peer4 from '../lib/peer4'
+import { toMultibaseB58 } from '../lib/multiformats'
 
-let db: any = null;
+let db: any = null
 
 // Initialize SQLite database
 async function initDatabase() {
-  if (db) return db;
+  if (db) return db
 
   const SQL = await initSqlJs({
     locateFile: file => `https://sql.js.org/dist/${file}`
-  });
+  })
 
   // Check if we have a saved database in localStorage
-  const savedDb = localStorage.getItem('didcomm_db');
+  const savedDb = localStorage.getItem('didcomm_db')
   if (savedDb) {
-    const uint8Array = new Uint8Array(JSON.parse(savedDb));
-    db = new SQL.Database(uint8Array);
+    const uint8Array = new Uint8Array(JSON.parse(savedDb))
+    db = new SQL.Database(uint8Array)
   } else {
-    db = new SQL.Database();
+    db = new SQL.Database()
 
     // Create tables
     db.run(`
@@ -29,20 +29,20 @@ async function initDatabase() {
         private_keys TEXT NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
-    `);
+    `)
 
-    saveDatabase();
+    saveDatabase()
   }
 
-  return db;
+  return db
 }
 
 // Save database to localStorage
 function saveDatabase() {
   if (db) {
-    const data = db.export();
-    const buffer = JSON.stringify(Array.from(data));
-    localStorage.setItem('didcomm_db', buffer);
+    const data = db.export()
+    const buffer = JSON.stringify(Array.from(data))
+    localStorage.setItem('didcomm_db', buffer)
   }
 }
 
@@ -55,39 +55,39 @@ async function generateEd25519KeyPair() {
     } as any,
     true,
     ['sign', 'verify']
-  );
+  )
 
-  const privateKeyRaw = await crypto.subtle.exportKey('pkcs8', keyPair.privateKey);
-  const publicKeyRaw = await crypto.subtle.exportKey('spki', keyPair.publicKey);
+  const privateKeyRaw = await crypto.subtle.exportKey('pkcs8', keyPair.privateKey)
+  const publicKeyRaw = await crypto.subtle.exportKey('spki', keyPair.publicKey)
 
   // Extract the raw 32-byte keys from the exported formats
-  const privateKey = new Uint8Array(privateKeyRaw).slice(-32);
-  const publicKey = new Uint8Array(publicKeyRaw).slice(-32);
+  const privateKey = new Uint8Array(privateKeyRaw).slice(-32)
+  const publicKey = new Uint8Array(publicKeyRaw).slice(-32)
 
-  return { privateKey, publicKey };
+  return { privateKey, publicKey }
 }
 
 // Generate X25519 key pair for encryption (derived from Ed25519)
 function generateX25519KeyPair() {
-  const privateKey = crypto.getRandomValues(new Uint8Array(32));
+  const privateKey = crypto.getRandomValues(new Uint8Array(32))
   // X25519 public key is the scalar multiplication of the private key with the base point
   // For simplicity, we'll use a random key pair (in production, you'd derive from Ed25519)
-  const publicKey = crypto.getRandomValues(new Uint8Array(32));
-  return { privateKey, publicKey };
+  const publicKey = crypto.getRandomValues(new Uint8Array(32))
+  return { privateKey, publicKey }
 }
 
 // Generate a new DID
 export async function generateDID() {
-  await initDatabase();
+  await initDatabase()
 
   // Generate Ed25519 key pair for authentication
-  const authKeys = await generateEd25519KeyPair();
+  const authKeys = await generateEd25519KeyPair()
 
   // Generate X25519 key pair for encryption
-  const encKeys = generateX25519KeyPair();
+  const encKeys = generateX25519KeyPair()
 
   // Get the service endpoint URL using current hostname
-  const serviceEndpoint = `${window.location.protocol}//${window.location.host}/didcomm`;
+  const serviceEndpoint = `${window.location.protocol}//${window.location.host}/didcomm`
 
   // Create DID Document with service endpoint
   const didDocument: any = {
@@ -112,13 +112,13 @@ export async function generateDID() {
         serviceEndpoint
       }
     ]
-  };
+  }
 
   // Generate the DID using peer4 library (this encodes the entire document including service)
-  const longFormDid = await peer4.encode(didDocument);
+  const longFormDid = await peer4.encode(didDocument)
 
   // Resolve to get the full DID document (this should include the service endpoint)
-  const resolvedDocument = await peer4.resolve(longFormDid);
+  const resolvedDocument = await peer4.resolve(longFormDid)
 
   // Store private keys
   const privateKeyData: any = {
@@ -134,57 +134,58 @@ export async function generateDID() {
       publicKeyMultibase: toMultibaseB58(encKeys.publicKey),
       privateKeyBytes: Array.from(encKeys.privateKey)
     }
-  };
+  }
 
   // Clear existing DID
-  db.run('DELETE FROM did_identity');
+  db.run('DELETE FROM did_identity')
 
   // Store the new DID (using long form)
-  db.run(
-    'INSERT INTO did_identity (did, did_document, private_keys) VALUES (?, ?, ?)',
-    [longFormDid, JSON.stringify(resolvedDocument), JSON.stringify(privateKeyData)]
-  );
+  db.run('INSERT INTO did_identity (did, did_document, private_keys) VALUES (?, ?, ?)', [
+    longFormDid,
+    JSON.stringify(resolvedDocument),
+    JSON.stringify(privateKeyData)
+  ])
 
-  saveDatabase();
+  saveDatabase()
 
   return {
     did: longFormDid,
     didDocument: resolvedDocument,
     keyPairs: privateKeyData
-  };
+  }
 }
 
 // Get the stored DID
 export async function getStoredDID() {
-  await initDatabase();
+  await initDatabase()
 
-  const result = db.exec('SELECT * FROM did_identity LIMIT 1');
+  const result = db.exec('SELECT * FROM did_identity LIMIT 1')
 
   if (result.length > 0 && result[0].values.length > 0) {
-    const row = result[0].values[0];
+    const row = result[0].values[0]
     return {
       did: row[1],
       didDocument: JSON.parse(row[2]),
       privateKeys: JSON.parse(row[3]),
       createdAt: row[4]
-    };
+    }
   }
 
-  return null;
+  return null
 }
 
 // Delete the stored DID
 export async function deleteDID() {
-  await initDatabase();
-  db.run('DELETE FROM did_identity');
-  saveDatabase();
+  await initDatabase()
+  db.run('DELETE FROM did_identity')
+  saveDatabase()
 }
 
 // Get or create a DID
 export async function getOrCreateDID() {
-  const existing = await getStoredDID();
+  const existing = await getStoredDID()
   if (existing) {
-    return existing;
+    return existing
   }
-  return await generateDID();
+  return await generateDID()
 }
