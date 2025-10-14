@@ -20,12 +20,10 @@
             <p>Loading DID...</p>
           </div>
           <div v-else-if="didInfo" class="did-info">
-            <h4>Your DID</h4>
+            <h4>Server DID</h4>
             <div class="did-display">
               <code>{{ didInfo.did }}</code>
             </div>
-            <p class="did-meta">Created: {{ formatDate(didInfo.createdAt) }}</p>
-            <button @click="resetDID" class="reset-button">Reset DID</button>
           </div>
           <div v-else class="error-state">
             <p>Failed to load DID</p>
@@ -40,7 +38,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import QrCodeDisplay from '../components/QrCodeDisplay.vue'
-import { getOrCreateDID, deleteDID, generateDID } from '../services/didService'
 import QRCode from 'qrcode'
 
 const didInfo = ref(null)
@@ -50,28 +47,27 @@ const mobileQrCanvas = ref(null)
 const loadDID = async () => {
   loading.value = true
   try {
-    const result = await getOrCreateDID()
-    didInfo.value = result
+    // Fetch server DID from backend
+    const response = await fetch('http://localhost:3000/api/did', {
+      credentials: 'include'
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const result = await response.json()
+    didInfo.value = {
+      did: result.did,
+      didDocument: result.didDocument,
+      createdAt: null
+    }
+    console.log('Loaded server DID:', result.did)
   } catch (error) {
     console.error('Failed to load DID:', error)
     didInfo.value = null
   } finally {
     loading.value = false
-  }
-}
-
-const resetDID = async () => {
-  if (confirm('Are you sure you want to delete and recreate your DID? This cannot be undone.')) {
-    loading.value = true
-    try {
-      await deleteDID()
-      const result = await generateDID()
-      didInfo.value = result
-    } catch (error) {
-      console.error('Failed to reset DID:', error)
-    } finally {
-      loading.value = false
-    }
   }
 }
 

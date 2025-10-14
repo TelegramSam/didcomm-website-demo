@@ -1,11 +1,13 @@
 // DIDComm message handling with decryption support
 import { Message } from 'didcomm-node'
 import { generateKeyPairFromSeed } from '@stablelib/x25519'
+import * as ed from '@noble/ed25519'
 import bs58 from 'bs58'
 import crypto from 'crypto'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import * as peer4 from './peer4.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -13,39 +15,70 @@ const __dirname = path.dirname(__filename)
 // Storage file for server DID and keys
 const SERVER_DID_FILE = path.join(__dirname, 'server-did.json')
 
-// Generate a did:key for the server
-function generateServerDID() {
+// Generate a did:peer:4 for the server
+async function generateServerDID() {
+  // Generate Ed25519 key pair for authentication
+  const authPrivateKey = ed.utils.randomPrivateKey()
+  const authPublicKey = await ed.getPublicKeyAsync(authPrivateKey)
+
   // Generate X25519 key pair for encryption
-  const seed = crypto.randomBytes(32)
-  const keyPair = generateKeyPairFromSeed(seed)
+  const encSeed = crypto.randomBytes(32)
+  const encKeyPair = generateKeyPairFromSeed(encSeed)
 
-  // Create multibase encoding (z = base58btc)
-  const publicKeyMultibase = 'z' + bs58.encode(keyPair.publicKey)
-
-  // Create did:key format
-  const did = `did:key:${publicKeyMultibase}`
-
-  // Create DID Document
+  // Create DID Document (without id, it will be added during resolution)
   const didDocument = {
-    '@context': ['https://www.w3.org/ns/did/v1', 'https://w3id.org/security/suites/x25519-2020/v1'],
-    id: did,
     verificationMethod: [
       {
-        id: `${did}#${publicKeyMultibase}`,
+        id: '#key-1',
+        type: 'Ed25519VerificationKey2020',
+        publicKeyMultibase: peer4.toMultibaseB58(authPublicKey)
+      },
+      {
+        id: '#key-2',
         type: 'X25519KeyAgreementKey2020',
-        controller: did,
-        publicKeyMultibase: publicKeyMultibase
+        publicKeyMultibase: peer4.toMultibaseB58(encKeyPair.publicKey)
       }
     ],
-    keyAgreement: [`${did}#${publicKeyMultibase}`]
+    authentication: ['#key-1'],
+    keyAgreement: ['#key-2'],
+    service: [
+      {
+        id: '#service',
+        type: 'DIDCommMessaging',
+        serviceEndpoint: {
+          uri: 'http://localhost:3000/didcomm',
+          accept: ['didcomm/v2']
+        }
+      }
+    ]
   }
 
-  // Store private key securely
+  // Generate the long-form did:peer:4
+  const longFormDid = peer4.encode(didDocument)
+
+  // Resolve to get the full DID document with id
+  const resolvedDocument = peer4.resolve(longFormDid)
+
+  // Store private keys
+  const privateKeys = {
+    'key-1': {
+      id: '#key-1',
+      type: 'Ed25519VerificationKey2020',
+      publicKeyMultibase: peer4.toMultibaseB58(authPublicKey),
+      privateKeyBytes: Array.from(authPrivateKey)
+    },
+    'key-2': {
+      id: '#key-2',
+      type: 'X25519KeyAgreementKey2020',
+      publicKeyMultibase: peer4.toMultibaseB58(encKeyPair.publicKey),
+      privateKeyBytes: Array.from(encKeyPair.secretKey)
+    }
+  }
+
   const serverData = {
-    did,
-    didDocument,
-    privateKey: Array.from(keyPair.secretKey), // Store as array for JSON
-    publicKey: Array.from(keyPair.publicKey),
+    did: longFormDid,
+    didDocument: resolvedDocument,
+    privateKeys: privateKeys,
     createdAt: new Date().toISOString()
   }
 
@@ -53,7 +86,7 @@ function generateServerDID() {
 }
 
 // Load or create server DID
-function getServerDID() {
+async function getServerDID() {
   if (fs.existsSync(SERVER_DID_FILE)) {
     const data = JSON.parse(fs.readFileSync(SERVER_DID_FILE, 'utf8'))
     console.log('Loaded existing server DID:', data.did)
@@ -61,14 +94,14 @@ function getServerDID() {
   }
 
   console.log('Generating new server DID...')
-  const serverData = generateServerDID()
+  const serverData = await generateServerDID()
   fs.writeFileSync(SERVER_DID_FILE, JSON.stringify(serverData, null, 2))
   console.log('Created new server DID:', serverData.did)
   return serverData
 }
 
 // Initialize server DID
-const SERVER_DID_DATA = getServerDID()
+const SERVER_DID_DATA = await getServerDID()
 
 // DID Resolver implementation
 class ServerDIDResolver {
@@ -97,10 +130,18 @@ class ServerDIDResolver {
       return this.resolveDIDKey(did)
     }
 
-    // For did:peer, we need the full long-form DID
+    // For did:peer:4, resolve from long-form DID
+    if (did.startsWith('did:peer:4') && did.includes(':z')) {
+      try {
+        return peer4.resolve(did)
+      } catch (error) {
+        console.error('Failed to resolve did:peer:4:', error)
+        return null
+      }
+    }
+
+    // For other did:peer, we need pre-registered document
     if (did.startsWith('did:peer:')) {
-      // Attempt to parse if it's a long-form did:peer
-      // This is a simplified implementation
       console.warn('did:peer resolution requires long-form DID or pre-registered document')
       return null
     }
@@ -142,20 +183,22 @@ class ServerSecretsResolver {
   constructor() {
     this.secrets = new Map()
 
-    // Add server's private key
-    const publicKeyBytes = new Uint8Array(SERVER_DID_DATA.publicKey)
-    const privateKeyBytes = new Uint8Array(SERVER_DID_DATA.privateKey)
-    const publicKeyMultibase = 'z' + bs58.encode(publicKeyBytes)
-    const privateKeyMultibase = 'z' + bs58.encode(privateKeyBytes)
-    const keyId = `${SERVER_DID_DATA.did}#${publicKeyMultibase}`
+    // Add server's private keys from the new format
+    if (SERVER_DID_DATA.privateKeys) {
+      for (const [keyName, keyData] of Object.entries(SERVER_DID_DATA.privateKeys)) {
+        const privateKeyBytes = new Uint8Array(keyData.privateKeyBytes)
+        const privateKeyMultibase = peer4.toMultibaseB58(privateKeyBytes)
+        const keyId = `${SERVER_DID_DATA.did}${keyData.id}`
 
-    this.secrets.set(keyId, {
-      id: keyId,
-      type: 'X25519KeyAgreementKey2020',
-      privateKeyMultibase: privateKeyMultibase
-    })
+        this.secrets.set(keyId, {
+          id: keyId,
+          type: keyData.type,
+          privateKeyMultibase: privateKeyMultibase
+        })
 
-    console.log('Initialized secrets resolver with key:', keyId)
+        console.log('Initialized secrets resolver with key:', keyId)
+      }
+    }
   }
 
   // Add a secret key

@@ -1,27 +1,119 @@
 {
-  "did": "did:key:zE29Y8coDCf7VnajpLAqcxXzKjGJGQtu3XBrzX4AB6GUu",
+  "did": "did:peer:4zQmQrDPtjc7UGmiRg5Gz7XHoRuS7jtgnUSoziqqLcDjsiM1:zFyKHvRiktbsmTuExZUhWPAVzbr88uzRH8FwuUTtRZzHmec29vdpVV4UBRCo1qQNTFG5xBhQ4wvAsva7kGqURy9zJqsupeKq8C3EGpwnfxnn33PtbnW93A7556dDJTzSqTpF2sTq5x2uK991134FDGRNB7kFDe77ZnpH62wK6RmFzG1MUa9tGpfZ2dnVpBfFc4qPNorpiPYZ3C5s1hzAvV2vhNBv6ZXNXEPk3P2MVaoYsmht71ak4x3fcjT4UPKWojaKJTMYYrnFXTL92k85eCafvjchPb9bAb6GwJRPkmrYbKpvhXFUxkAb6X5sg4LWSHrBsgbZdKwtFJpBuGtvn8Pois5YvzrUce8PfFfGeZrTGbEiKwKDRUZjRaUvdwb8zLUZZqzqTw8hBGjegsytAkozTwmddQFsVY3BRCogRN8BafHyWLMQeRmVUdSiawFSU2aqBPSNKU5qpGeJirBjDEFmP4FSbzKs6GbhCwkzPDzghNSgLrUDgLFTpsEVKUkZg2a2goWAEztzn3a8yfDsGUSrJKLJuaY2wP5vQhBaRdTJv2ArXqJfv8JvJRLb82jNBkQUm2UeJfxhRbnHbdBYqpYpZzxvhEzDkWfXDdpZcVnAyxkLLX7a",
   "didDocument": {
-    "@context": ["https://www.w3.org/ns/did/v1", "https://w3id.org/security/suites/x25519-2020/v1"],
-    "id": "did:key:zE29Y8coDCf7VnajpLAqcxXzKjGJGQtu3XBrzX4AB6GUu",
     "verificationMethod": [
       {
-        "id": "did:key:zE29Y8coDCf7VnajpLAqcxXzKjGJGQtu3XBrzX4AB6GUu#zE29Y8coDCf7VnajpLAqcxXzKjGJGQtu3XBrzX4AB6GUu",
+        "id": "did:peer:4zQmQrDPtjc7UGmiRg5Gz7XHoRuS7jtgnUSoziqqLcDjsiM1#key-1",
+        "type": "Ed25519VerificationKey2020",
+        "publicKeyMultibase": "z2F4zbARCPU1Ro1J5JAbmi7Np2ruDKZExhK5i8ZKZuTx8",
+        "controller": "did:peer:4zQmQrDPtjc7UGmiRg5Gz7XHoRuS7jtgnUSoziqqLcDjsiM1"
+      },
+      {
+        "id": "did:peer:4zQmQrDPtjc7UGmiRg5Gz7XHoRuS7jtgnUSoziqqLcDjsiM1#key-2",
         "type": "X25519KeyAgreementKey2020",
-        "controller": "did:key:zE29Y8coDCf7VnajpLAqcxXzKjGJGQtu3XBrzX4AB6GUu",
-        "publicKeyMultibase": "zE29Y8coDCf7VnajpLAqcxXzKjGJGQtu3XBrzX4AB6GUu"
+        "publicKeyMultibase": "zAn8gFgoJdcSoDogvuvthGTSYEGMDSmiho7BF7bVnnync",
+        "controller": "did:peer:4zQmQrDPtjc7UGmiRg5Gz7XHoRuS7jtgnUSoziqqLcDjsiM1"
       }
     ],
+    "authentication": [
+      "did:peer:4zQmQrDPtjc7UGmiRg5Gz7XHoRuS7jtgnUSoziqqLcDjsiM1#key-1"
+    ],
     "keyAgreement": [
-      "did:key:zE29Y8coDCf7VnajpLAqcxXzKjGJGQtu3XBrzX4AB6GUu#zE29Y8coDCf7VnajpLAqcxXzKjGJGQtu3XBrzX4AB6GUu"
-    ]
+      "did:peer:4zQmQrDPtjc7UGmiRg5Gz7XHoRuS7jtgnUSoziqqLcDjsiM1#key-2"
+    ],
+    "service": [
+      {
+        "id": "#service",
+        "type": "DIDCommMessaging",
+        "serviceEndpoint": {
+          "uri": "http://localhost:3000/didcomm",
+          "accept": [
+            "didcomm/v2"
+          ]
+        }
+      }
+    ],
+    "id": "did:peer:4zQmQrDPtjc7UGmiRg5Gz7XHoRuS7jtgnUSoziqqLcDjsiM1"
   },
-  "privateKey": [
-    207, 12, 115, 110, 201, 17, 64, 146, 115, 150, 77, 111, 71, 62, 1, 174, 68, 61, 98, 180, 127,
-    57, 228, 174, 222, 203, 255, 144, 15, 203, 180, 224
-  ],
-  "publicKey": [
-    193, 115, 41, 211, 109, 14, 53, 29, 74, 143, 48, 144, 67, 99, 161, 116, 70, 52, 118, 77, 96,
-    194, 117, 248, 134, 75, 45, 22, 125, 245, 236, 54
-  ],
-  "createdAt": "2025-10-13T21:37:09.656Z"
+  "privateKeys": {
+    "key-1": {
+      "id": "#key-1",
+      "type": "Ed25519VerificationKey2020",
+      "publicKeyMultibase": "z2F4zbARCPU1Ro1J5JAbmi7Np2ruDKZExhK5i8ZKZuTx8",
+      "privateKeyBytes": [
+        195,
+        106,
+        55,
+        97,
+        206,
+        223,
+        17,
+        20,
+        250,
+        159,
+        103,
+        22,
+        162,
+        236,
+        34,
+        73,
+        153,
+        51,
+        177,
+        188,
+        251,
+        26,
+        116,
+        160,
+        167,
+        46,
+        59,
+        159,
+        142,
+        81,
+        131,
+        71
+      ]
+    },
+    "key-2": {
+      "id": "#key-2",
+      "type": "X25519KeyAgreementKey2020",
+      "publicKeyMultibase": "zAn8gFgoJdcSoDogvuvthGTSYEGMDSmiho7BF7bVnnync",
+      "privateKeyBytes": [
+        45,
+        80,
+        113,
+        104,
+        170,
+        113,
+        114,
+        93,
+        125,
+        243,
+        242,
+        40,
+        14,
+        254,
+        125,
+        45,
+        166,
+        193,
+        244,
+        184,
+        4,
+        211,
+        102,
+        125,
+        219,
+        144,
+        127,
+        13,
+        65,
+        88,
+        57,
+        63
+      ]
+    }
+  },
+  "createdAt": "2025-10-14T23:19:20.601Z"
 }

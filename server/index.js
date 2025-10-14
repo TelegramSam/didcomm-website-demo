@@ -158,10 +158,10 @@ const messageStore = new Map()
 const sessionMessageQueue = new Map() // Maps session tokens to message queues
 
 // DIDComm message receiving endpoint
-app.post('/dc', async (req, res) => {
+app.post('/didcomm', async (req, res) => {
   const packedMessage = req.body
 
-  console.log('=== Received DIDComm message on /dc ===')
+  console.log('=== Received DIDComm message on /didcomm ===')
   console.log('Raw message:', JSON.stringify(packedMessage, null, 2))
 
   try {
@@ -364,7 +364,7 @@ app.get('/api/did', (req, res) => {
     did: SERVER_DID_DATA.did,
     didDocument: SERVER_DID_DATA.didDocument,
     endpoints: {
-      didcomm: `http://localhost:${PORT}/dc`
+      didcomm: `http://localhost:${PORT}/didcomm`
     }
   })
 })
@@ -377,7 +377,7 @@ app.get('/health', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Express server running on http://localhost:${PORT}`)
   console.log(`Session management enabled with cookie name: ${sessionConfig.name}`)
-  console.log(`DIDComm endpoint available at: http://localhost:${PORT}/dc`)
+  console.log(`DIDComm endpoint available at: http://localhost:${PORT}/didcomm`)
   console.log(`Server DID: ${SERVER_DID_DATA.did}`)
   console.log(`Server DID Document available at: http://localhost:${PORT}/api/did`)
 })
