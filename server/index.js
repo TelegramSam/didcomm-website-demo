@@ -30,6 +30,8 @@ app.use(
 )
 app.use(cookieParser())
 app.use(express.json())
+app.use(express.text({ type: 'application/didcomm-encrypted+json' }))
+app.use(express.text({ type: 'text/plain' }))
 app.use(session(sessionConfig))
 
 // Logging middleware
@@ -159,9 +161,13 @@ const sessionMessageQueue = new Map() // Maps session tokens to message queues
 
 // DIDComm message receiving endpoint
 app.post('/didcomm', async (req, res) => {
+  console.log('=== Received DIDComm message on /didcomm ===')
+  console.log('Content-Type:', req.headers['content-type'])
+  console.log('Body type:', typeof req.body)
+  console.log('Body:', req.body)
+
   const packedMessage = req.body
 
-  console.log('=== Received DIDComm message on /didcomm ===')
   console.log('Raw message:', JSON.stringify(packedMessage, null, 2))
 
   try {

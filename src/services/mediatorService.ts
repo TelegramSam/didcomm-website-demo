@@ -1,7 +1,14 @@
 // Indicio Public Mediator Service
-import { saveMobileDID, getMobileDID, saveConnection, saveMessage } from './mobileStorage'
-// import { packMessage, addKnownDID } from './didcommService'; // Temporarily disabled due to WASM loading issues
+import {
+  saveMobileDID,
+  getMobileDID,
+  saveConnection,
+  saveMessage,
+  updateMessage
+} from './mobileStorage'
+import { packMessage, addKnownDID } from './didcommService'
 import * as peer4 from '../lib/peer4'
+import { toMultikeyEd25519, toMultikeyX25519 } from '../lib/multiformats'
 import bs58 from 'bs58'
 
 // Indicio Public Mediator Configuration
@@ -40,10 +47,6 @@ function generateX25519KeyPair() {
   return { privateKey, publicKey }
 }
 
-// Convert bytes to multibase base58btc format
-function bytesToMultibase(bytes: Uint8Array): string {
-  return 'z' + bs58.encode(bytes)
-}
 
 // Generate a new DID for the mobile wallet
 async function generateMobileDID() {
@@ -58,13 +61,13 @@ async function generateMobileDID() {
     verificationMethod: [
       {
         id: '#key-1',
-        type: 'Ed25519VerificationKey2020',
-        publicKeyMultibase: bytesToMultibase(authKeys.publicKey)
+        type: 'Multikey',
+        publicKeyMultibase: toMultikeyEd25519(authKeys.publicKey)
       },
       {
         id: '#key-2',
-        type: 'X25519KeyAgreementKey2020',
-        publicKeyMultibase: bytesToMultibase(encKeys.publicKey)
+        type: 'Multikey',
+        publicKeyMultibase: toMultikeyX25519(encKeys.publicKey)
       }
     ],
     authentication: ['#key-1'],
@@ -81,21 +84,21 @@ async function generateMobileDID() {
   }
 
   // Generate the DID using peer4 library
-  const longFormDid = peer4.encode(inputDocument)
-  const resolvedDocument = peer4.resolve(longFormDid)
+  const longFormDid = await peer4.encode(inputDocument)
+  const resolvedDocument = await peer4.resolve(longFormDid)
 
   // Store private keys
   const privateKeyData: any = {
     'key-1': {
       id: '#key-1',
-      type: 'Ed25519VerificationKey2020',
-      publicKeyMultibase: bytesToMultibase(authKeys.publicKey),
+      type: 'Multikey',
+      publicKeyMultibase: toMultikeyEd25519(authKeys.publicKey),
       privateKeyBytes: Array.from(authKeys.privateKey)
     },
     'key-2': {
       id: '#key-2',
-      type: 'X25519KeyAgreementKey2020',
-      publicKeyMultibase: bytesToMultibase(encKeys.publicKey),
+      type: 'Multikey',
+      publicKeyMultibase: toMultikeyX25519(encKeys.publicKey),
       privateKeyBytes: Array.from(encKeys.privateKey)
     }
   }
@@ -120,8 +123,10 @@ async function sendMediationRequest(myDid: string) {
 
   console.log('Sending mediation request:', mediationRequest)
 
-  // Log outgoing message
+  // Log outgoing message and get the message ID for updates
+  const outboundMessageId = crypto.randomUUID()
   saveMessage({
+    id: outboundMessageId,
     direction: 'outbound',
     type: mediationRequest.type,
     messageId: mediationRequest.id,
@@ -134,50 +139,40 @@ async function sendMediationRequest(myDid: string) {
   })
 
   try {
-    // TODO: Encrypt the message using DIDComm v2 once WASM loading is resolved
-    // For now, sending as plaintext
-    console.log('Sending mediation request (plaintext)...')
+    // Encrypt the message using DIDComm v2
+    console.log('Encrypting mediation request...')
+    const encryptedMessage = await packMessage(mediationRequest, MEDIATOR_CONFIG.did, myDid)
+
+    console.log('Sending encrypted mediation request...')
 
     const response = await fetch(MEDIATOR_CONFIG.endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/didcomm-encrypted+json'
       },
-      body: JSON.stringify(mediationRequest)
+      body: encryptedMessage
     })
 
     if (response.ok) {
       const result = await response.json()
       console.log('Mediation response:', result)
 
-      // Log incoming response
-      saveMessage({
-        direction: 'inbound',
-        type: result.type || 'mediation-response',
-        messageId: result.id || crypto.randomUUID(),
-        from: result.from || MEDIATOR_CONFIG.did,
-        to: result.to || [myDid],
-        body: result.body || result,
-        message: result,
-        status: 'received',
-        timestamp: new Date().toISOString()
+      // Update the outbound message with the response
+      updateMessage(outboundMessageId, {
+        response: result,
+        responseStatus: 'received',
+        responseTimestamp: new Date().toISOString()
       })
 
       return result
     } else {
       console.error('Mediation request failed:', response.status, response.statusText)
 
-      // Log failed response
-      saveMessage({
-        direction: 'inbound',
-        type: 'error',
-        messageId: crypto.randomUUID(),
-        from: MEDIATOR_CONFIG.did,
-        to: [myDid],
-        body: { error: `HTTP ${response.status}: ${response.statusText}` },
-        message: null,
-        status: 'error',
-        timestamp: new Date().toISOString()
+      // Update the outbound message with error
+      updateMessage(outboundMessageId, {
+        response: { error: `HTTP ${response.status}: ${response.statusText}` },
+        responseStatus: 'error',
+        responseTimestamp: new Date().toISOString()
       })
 
       return null
@@ -185,17 +180,11 @@ async function sendMediationRequest(myDid: string) {
   } catch (error) {
     console.error('Error sending mediation request:', error)
 
-    // Log error
-    saveMessage({
-      direction: 'outbound',
-      type: 'error',
-      messageId: crypto.randomUUID(),
-      from: myDid,
-      to: [MEDIATOR_CONFIG.did],
-      body: { error: String(error) },
-      message: null,
-      status: 'error',
-      timestamp: new Date().toISOString()
+    // Update the outbound message with error
+    updateMessage(outboundMessageId, {
+      response: { error: String(error) },
+      responseStatus: 'error',
+      responseTimestamp: new Date().toISOString()
     })
 
     return null
@@ -271,4 +260,168 @@ export function getMediatorStatus() {
 // Disconnect from mediator
 export function disconnectMediator() {
   localStorage.removeItem('mediator_connection')
+}
+
+// Generate a new DID for a specific connection (not the main mobile DID)
+export async function generateConnectionDID() {
+  // Generate Ed25519 key pair for authentication
+  const authKeys = await generateEd25519KeyPair()
+
+  // Generate X25519 key pair for encryption
+  const encKeys = generateX25519KeyPair()
+
+  // Create DID Document with DIDComm v2 service endpoint pointing to mediator
+  const inputDocument: any = {
+    verificationMethod: [
+      {
+        id: '#key-1',
+        type: 'Multikey',
+        publicKeyMultibase: toMultikeyEd25519(authKeys.publicKey)
+      },
+      {
+        id: '#key-2',
+        type: 'Multikey',
+        publicKeyMultibase: toMultikeyX25519(encKeys.publicKey)
+      }
+    ],
+    authentication: ['#key-1'],
+    keyAgreement: ['#key-2'],
+    service: [
+      {
+        id: '#didcomm',
+        type: 'DIDCommMessaging',
+        serviceEndpoint: MEDIATOR_CONFIG.endpoint,
+        accept: ['didcomm/v2'],
+        routingKeys: [MEDIATOR_CONFIG.did]
+      }
+    ]
+  }
+
+  // Generate the DID using peer4 library
+  const longFormDid = await peer4.encode(inputDocument)
+  const resolvedDocument = await peer4.resolve(longFormDid)
+
+  // Store private keys
+  const privateKeyData: any = {
+    'key-1': {
+      id: '#key-1',
+      type: 'Multikey',
+      publicKeyMultibase: toMultikeyEd25519(authKeys.publicKey),
+      privateKeyBytes: Array.from(authKeys.privateKey)
+    },
+    'key-2': {
+      id: '#key-2',
+      type: 'Multikey',
+      publicKeyMultibase: toMultikeyX25519(encKeys.publicKey),
+      privateKeyBytes: Array.from(encKeys.privateKey)
+    }
+  }
+
+  return {
+    did: longFormDid,
+    didDocument: resolvedDocument,
+    privateKeys: privateKeyData,
+    createdAt: new Date().toISOString()
+  }
+}
+
+// Register a connection DID with the mediator using keylist-update protocol
+export async function registerConnectionDIDWithMediator(
+  connectionDid: string
+): Promise<{ success: boolean; error?: string; response?: any }> {
+  const mobileDID = getMobileDID()
+  if (!mobileDID) {
+    return { success: false, error: 'No mobile DID found. Connect to mediator first.' }
+  }
+
+  // Create keylist-update message
+  const keylistUpdate = {
+    type: 'https://didcomm.org/coordinate-mediation/3.0/keylist-update',
+    id: crypto.randomUUID(),
+    from: mobileDID.did,
+    to: [MEDIATOR_CONFIG.did],
+    body: {
+      updates: [
+        {
+          recipient_did: connectionDid,
+          action: 'add'
+        }
+      ]
+    }
+  }
+
+  console.log('Sending keylist-update:', keylistUpdate)
+
+  // Log outgoing message and get the message ID for updates
+  const outboundMessageId = crypto.randomUUID()
+  saveMessage({
+    id: outboundMessageId,
+    direction: 'outbound',
+    type: keylistUpdate.type,
+    messageId: keylistUpdate.id,
+    from: keylistUpdate.from,
+    to: keylistUpdate.to,
+    body: keylistUpdate.body,
+    message: keylistUpdate,
+    status: 'sent',
+    timestamp: new Date().toISOString()
+  })
+
+  try {
+    // Encrypt the message using DIDComm v2
+    console.log('Encrypting keylist-update...')
+    const encryptedMessage = await packMessage(
+      keylistUpdate,
+      MEDIATOR_CONFIG.did,
+      mobileDID.did
+    )
+
+    console.log('Sending encrypted keylist-update...')
+
+    // Send to mediator
+    const response = await fetch(MEDIATOR_CONFIG.endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/didcomm-encrypted+json'
+      },
+      body: encryptedMessage
+    })
+
+    if (response.ok) {
+      const result = await response.json()
+      console.log('Keylist-update response:', result)
+
+      // Update the outbound message with the response
+      updateMessage(outboundMessageId, {
+        response: result,
+        responseStatus: 'received',
+        responseTimestamp: new Date().toISOString()
+      })
+
+      return { success: true, response: result }
+    } else {
+      const errorText = await response.text()
+      console.error('Keylist-update failed:', response.status, errorText)
+
+      // Update the outbound message with error
+      updateMessage(outboundMessageId, {
+        response: { error: `HTTP ${response.status}: ${errorText}` },
+        responseStatus: 'error',
+        responseTimestamp: new Date().toISOString()
+      })
+
+      return { success: false, error: `HTTP ${response.status}: ${errorText}` }
+    }
+  } catch (error) {
+    console.error('Error sending keylist-update:', error)
+
+    // Update the outbound message with error
+    updateMessage(outboundMessageId, {
+      response: { error: String(error) },
+      responseStatus: 'error',
+      responseTimestamp: new Date().toISOString()
+    })
+
+    return { success: false, error: String(error) }
+  }
 }

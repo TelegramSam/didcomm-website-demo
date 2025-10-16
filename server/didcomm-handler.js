@@ -30,13 +30,13 @@ async function generateServerDID() {
     verificationMethod: [
       {
         id: '#key-1',
-        type: 'Ed25519VerificationKey2020',
-        publicKeyMultibase: peer4.toMultibaseB58(authPublicKey)
+        type: 'Multikey',
+        publicKeyMultibase: peer4.toMultikeyEd25519(authPublicKey)
       },
       {
         id: '#key-2',
-        type: 'X25519KeyAgreementKey2020',
-        publicKeyMultibase: peer4.toMultibaseB58(encKeyPair.publicKey)
+        type: 'Multikey',
+        publicKeyMultibase: peer4.toMultikeyX25519(encKeyPair.publicKey)
       }
     ],
     authentication: ['#key-1'],
@@ -47,7 +47,8 @@ async function generateServerDID() {
         type: 'DIDCommMessaging',
         serviceEndpoint: {
           uri: 'http://localhost:3000/didcomm',
-          accept: ['didcomm/v2']
+          accept: ['didcomm/v2'],
+          routingKeys: []
         }
       }
     ]
@@ -63,14 +64,14 @@ async function generateServerDID() {
   const privateKeys = {
     'key-1': {
       id: '#key-1',
-      type: 'Ed25519VerificationKey2020',
-      publicKeyMultibase: peer4.toMultibaseB58(authPublicKey),
+      type: 'Multikey',
+      publicKeyMultibase: peer4.toMultikeyEd25519(authPublicKey),
       privateKeyBytes: Array.from(authPrivateKey)
     },
     'key-2': {
       id: '#key-2',
-      type: 'X25519KeyAgreementKey2020',
-      publicKeyMultibase: peer4.toMultibaseB58(encKeyPair.publicKey),
+      type: 'Multikey',
+      publicKeyMultibase: peer4.toMultikeyX25519(encKeyPair.publicKey),
       privateKeyBytes: Array.from(encKeyPair.secretKey)
     }
   }
@@ -87,17 +88,28 @@ async function generateServerDID() {
 
 // Load or create server DID
 async function getServerDID() {
-  if (fs.existsSync(SERVER_DID_FILE)) {
-    const data = JSON.parse(fs.readFileSync(SERVER_DID_FILE, 'utf8'))
-    console.log('Loaded existing server DID:', data.did)
-    return data
-  }
-
-  console.log('Generating new server DID...')
+  // TEMPORARY: Always regenerate DID on boot for testing
+  // TODO: Remove this block to restore normal behavior (load existing DID)
+  // START TEMPORARY CODE - REVERT THIS
+  console.log('Generating new server DID (TEMPORARY: regenerating on every boot)...')
   const serverData = await generateServerDID()
   fs.writeFileSync(SERVER_DID_FILE, JSON.stringify(serverData, null, 2))
   console.log('Created new server DID:', serverData.did)
   return serverData
+  // END TEMPORARY CODE - REVERT THIS
+
+  // ORIGINAL CODE (commented out temporarily):
+  // if (fs.existsSync(SERVER_DID_FILE)) {
+  //   const data = JSON.parse(fs.readFileSync(SERVER_DID_FILE, 'utf8'))
+  //   console.log('Loaded existing server DID:', data.did)
+  //   return data
+  // }
+  //
+  // console.log('Generating new server DID...')
+  // const serverData = await generateServerDID()
+  // fs.writeFileSync(SERVER_DID_FILE, JSON.stringify(serverData, null, 2))
+  // console.log('Created new server DID:', serverData.did)
+  // return serverData
 }
 
 // Initialize server DID

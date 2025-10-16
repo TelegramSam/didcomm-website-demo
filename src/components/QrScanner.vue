@@ -46,7 +46,7 @@ import { ref, onUnmounted } from 'vue'
 import { Html5Qrcode } from 'html5-qrcode'
 import { saveConnection } from '../services/mobileStorage'
 import * as peer4 from '../lib/peer4'
-import bs58 from 'bs58'
+import { toMultikeyEd25519, toMultikeyX25519 } from '../lib/multiformats'
 
 const scannedData = ref('')
 const isScanning = ref(false)
@@ -92,10 +92,6 @@ function generateX25519KeyPair() {
   return { privateKey, publicKey }
 }
 
-// Convert bytes to multibase base58btc format
-function bytesToMultibase(bytes) {
-  return 'z' + bs58.encode(bytes)
-}
 
 // Generate a new DID for this connection
 async function generateConnectionDID() {
@@ -107,13 +103,13 @@ async function generateConnectionDID() {
     verificationMethod: [
       {
         id: '#key-1',
-        type: 'Ed25519VerificationKey2020',
-        publicKeyMultibase: bytesToMultibase(authKeys.publicKey)
+        type: 'Multikey',
+        publicKeyMultibase: toMultikeyEd25519(authKeys.publicKey)
       },
       {
         id: '#key-2',
-        type: 'X25519KeyAgreementKey2020',
-        publicKeyMultibase: bytesToMultibase(encKeys.publicKey)
+        type: 'Multikey',
+        publicKeyMultibase: toMultikeyX25519(encKeys.publicKey)
       }
     ],
     authentication: ['#key-1'],
@@ -126,14 +122,14 @@ async function generateConnectionDID() {
   const privateKeyData = {
     'key-1': {
       id: '#key-1',
-      type: 'Ed25519VerificationKey2020',
-      publicKeyMultibase: bytesToMultibase(authKeys.publicKey),
+      type: 'Multikey',
+      publicKeyMultibase: toMultikeyEd25519(authKeys.publicKey),
       privateKeyBytes: Array.from(authKeys.privateKey)
     },
     'key-2': {
       id: '#key-2',
-      type: 'X25519KeyAgreementKey2020',
-      publicKeyMultibase: bytesToMultibase(encKeys.publicKey),
+      type: 'Multikey',
+      publicKeyMultibase: toMultikeyX25519(encKeys.publicKey),
       privateKeyBytes: Array.from(encKeys.privateKey)
     }
   }

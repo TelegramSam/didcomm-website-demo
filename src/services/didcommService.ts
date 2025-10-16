@@ -30,7 +30,7 @@ class ClientDIDResolver {
     if (did.startsWith('did:peer:4')) {
       try {
         if (peer4.LONG_RE.test(did)) {
-          return peer4.resolve(did)
+          return await peer4.resolve(did)
         } else {
           console.warn('Cannot resolve short-form did:peer:4 without document')
           return null
@@ -49,27 +49,81 @@ class ClientDIDResolver {
   resolveDIDKey(did: string): any {
     const keyId = did.replace('did:key:', '')
 
-    // This is a simplified resolver - in production, you'd need to properly
-    // decode the multicodec prefix to determine key type
-    const didDocument = {
-      '@context': [
-        'https://www.w3.org/ns/did/v1',
-        'https://w3id.org/security/suites/x25519-2020/v1',
-        'https://w3id.org/security/suites/ed25519-2020/v1'
-      ],
-      id: did,
-      verificationMethod: [
-        {
-          id: `${did}#${keyId}`,
-          type: 'X25519KeyAgreementKey2020',
-          controller: did,
-          publicKeyMultibase: keyId
-        }
-      ],
-      keyAgreement: [`${did}#${keyId}`]
-    }
+    // Determine key type based on multicodec prefix
+    // z6Mk = Ed25519 (0xed01)
+    // z6LS = X25519 (0xec01)
+    const isEd25519 = keyId.startsWith('z6Mk')
+    const isX25519 = keyId.startsWith('z6LS')
 
-    return didDocument
+    if (isEd25519) {
+      // Ed25519 verification key
+      // Note: In a full implementation, we should derive the X25519 key from Ed25519
+      // For now, we'll create a document with both verification and key agreement capabilities
+      const didDocument = {
+        '@context': [
+          'https://www.w3.org/ns/did/v1',
+          'https://w3id.org/security/suites/ed25519-2020/v1',
+          'https://w3id.org/security/suites/x25519-2020/v1'
+        ],
+        id: did,
+        verificationMethod: [
+          {
+            id: `${did}#${keyId}`,
+            type: 'Ed25519VerificationKey2020',
+            controller: did,
+            publicKeyMultibase: keyId
+          }
+        ],
+        authentication: [`${did}#${keyId}`],
+        assertionMethod: [`${did}#${keyId}`],
+        capabilityDelegation: [`${did}#${keyId}`],
+        capabilityInvocation: [`${did}#${keyId}`],
+        keyAgreement: [`${did}#${keyId}`],
+        service: []
+      }
+      return didDocument
+    } else if (isX25519) {
+      // X25519 key agreement key
+      const didDocument = {
+        '@context': [
+          'https://www.w3.org/ns/did/v1',
+          'https://w3id.org/security/suites/x25519-2020/v1'
+        ],
+        id: did,
+        verificationMethod: [
+          {
+            id: `${did}#${keyId}`,
+            type: 'X25519KeyAgreementKey2020',
+            controller: did,
+            publicKeyMultibase: keyId
+          }
+        ],
+        authentication: [],
+        keyAgreement: [`${did}#${keyId}`],
+        service: []
+      }
+      return didDocument
+    } else {
+      // Default to Ed25519 for unknown types
+      const didDocument = {
+        '@context': [
+          'https://www.w3.org/ns/did/v1',
+          'https://w3id.org/security/suites/ed25519-2020/v1'
+        ],
+        id: did,
+        verificationMethod: [
+          {
+            id: `${did}#${keyId}`,
+            type: 'Ed25519VerificationKey2020',
+            controller: did,
+            publicKeyMultibase: keyId
+          }
+        ],
+        authentication: [`${did}#${keyId}`],
+        service: []
+      }
+      return didDocument
+    }
   }
 }
 

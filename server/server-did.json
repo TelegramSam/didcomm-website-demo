@@ -1,25 +1,25 @@
 {
-  "did": "did:peer:4zQmQrDPtjc7UGmiRg5Gz7XHoRuS7jtgnUSoziqqLcDjsiM1:zFyKHvRiktbsmTuExZUhWPAVzbr88uzRH8FwuUTtRZzHmec29vdpVV4UBRCo1qQNTFG5xBhQ4wvAsva7kGqURy9zJqsupeKq8C3EGpwnfxnn33PtbnW93A7556dDJTzSqTpF2sTq5x2uK991134FDGRNB7kFDe77ZnpH62wK6RmFzG1MUa9tGpfZ2dnVpBfFc4qPNorpiPYZ3C5s1hzAvV2vhNBv6ZXNXEPk3P2MVaoYsmht71ak4x3fcjT4UPKWojaKJTMYYrnFXTL92k85eCafvjchPb9bAb6GwJRPkmrYbKpvhXFUxkAb6X5sg4LWSHrBsgbZdKwtFJpBuGtvn8Pois5YvzrUce8PfFfGeZrTGbEiKwKDRUZjRaUvdwb8zLUZZqzqTw8hBGjegsytAkozTwmddQFsVY3BRCogRN8BafHyWLMQeRmVUdSiawFSU2aqBPSNKU5qpGeJirBjDEFmP4FSbzKs6GbhCwkzPDzghNSgLrUDgLFTpsEVKUkZg2a2goWAEztzn3a8yfDsGUSrJKLJuaY2wP5vQhBaRdTJv2ArXqJfv8JvJRLb82jNBkQUm2UeJfxhRbnHbdBYqpYpZzxvhEzDkWfXDdpZcVnAyxkLLX7a",
+  "did": "did:peer:4zQmNVGjkmPPj8ATePLfntNLUERxnNgcZJg3HGEpxdu5Wr5J:z46jwr2kePxdAu8wau3o4V1trW2hujKHwxBS9MX663irNbmHxpxoNdrfuDy7sBkj1iDkAvmGTEGeUeU5UTroDNG2KsALw8WkVJWYtuBCqh86vT2R4MuycfuPHXiDLaSpKSHyEj9RvnSrYCgf1GJpySBYWypUQLHMB591kiHCHHwnEQoYkk1ZACs3astyQHr8gJpSTnGhiFCzqXpEv8CEGb3NwpUkkGVfRXuYKbgDfxynSD1eW6524SWBm2vK313SVsNi3sbQqo2AF4UdEKnuXyRHd65wcGAhaqau68pYh8DxH5m5b7NRUMdswKwvEa3xPXwoRYdEwDjKR9gpKH2vziwzAhwRHqziZeamMbfWaRYkvXyYfyp7B2kGEpNp3mLKX3DvNggtkshfbJNuTB8rnAPXZDHF2dvmiyFvA2hRn2Cdz4h7R7vgrrBLCuUuucQ8u6KnmDHYwo3a4Veaov7vkLPkATJCrvo8u67s6J9qZixNzskEoPCUeftDLTfMEZEd7Yz17HDYXWbS5VCzkSmrRXYGW9wLSQemm3ozDgV7QmowD5Ubu1e5cwyXQ3yHXe82wFvJRbK4VzuEQapa6Gqwr3kWYXYN2V9CLi3W",
   "didDocument": {
     "verificationMethod": [
       {
-        "id": "did:peer:4zQmQrDPtjc7UGmiRg5Gz7XHoRuS7jtgnUSoziqqLcDjsiM1#key-1",
+        "id": "did:peer:4zQmNVGjkmPPj8ATePLfntNLUERxnNgcZJg3HGEpxdu5Wr5J#key-1",
         "type": "Ed25519VerificationKey2020",
-        "publicKeyMultibase": "z2F4zbARCPU1Ro1J5JAbmi7Np2ruDKZExhK5i8ZKZuTx8",
-        "controller": "did:peer:4zQmQrDPtjc7UGmiRg5Gz7XHoRuS7jtgnUSoziqqLcDjsiM1"
+        "publicKeyMultibase": "z6MkvhwFmjnsSGbhtMduTX5PM8MdoaQURSk9rY1c3Q69Bu43",
+        "controller": "did:peer:4zQmNVGjkmPPj8ATePLfntNLUERxnNgcZJg3HGEpxdu5Wr5J"
       },
       {
-        "id": "did:peer:4zQmQrDPtjc7UGmiRg5Gz7XHoRuS7jtgnUSoziqqLcDjsiM1#key-2",
+        "id": "did:peer:4zQmNVGjkmPPj8ATePLfntNLUERxnNgcZJg3HGEpxdu5Wr5J#key-2",
         "type": "X25519KeyAgreementKey2020",
-        "publicKeyMultibase": "zAn8gFgoJdcSoDogvuvthGTSYEGMDSmiho7BF7bVnnync",
-        "controller": "did:peer:4zQmQrDPtjc7UGmiRg5Gz7XHoRuS7jtgnUSoziqqLcDjsiM1"
+        "publicKeyMultibase": "z6LSjjKGTnFc4E4M2vnFBZYtp4nZg5SbqLtvNeSNobJ63ZEf",
+        "controller": "did:peer:4zQmNVGjkmPPj8ATePLfntNLUERxnNgcZJg3HGEpxdu5Wr5J"
       }
     ],
     "authentication": [
-      "did:peer:4zQmQrDPtjc7UGmiRg5Gz7XHoRuS7jtgnUSoziqqLcDjsiM1#key-1"
+      "did:peer:4zQmNVGjkmPPj8ATePLfntNLUERxnNgcZJg3HGEpxdu5Wr5J#key-1"
     ],
     "keyAgreement": [
-      "did:peer:4zQmQrDPtjc7UGmiRg5Gz7XHoRuS7jtgnUSoziqqLcDjsiM1#key-2"
+      "did:peer:4zQmNVGjkmPPj8ATePLfntNLUERxnNgcZJg3HGEpxdu5Wr5J#key-2"
     ],
     "service": [
       {
@@ -29,91 +29,92 @@
           "uri": "http://localhost:3000/didcomm",
           "accept": [
             "didcomm/v2"
-          ]
+          ],
+          "routingKeys": []
         }
       }
     ],
-    "id": "did:peer:4zQmQrDPtjc7UGmiRg5Gz7XHoRuS7jtgnUSoziqqLcDjsiM1"
+    "id": "did:peer:4zQmNVGjkmPPj8ATePLfntNLUERxnNgcZJg3HGEpxdu5Wr5J"
   },
   "privateKeys": {
     "key-1": {
       "id": "#key-1",
-      "type": "Ed25519VerificationKey2020",
-      "publicKeyMultibase": "z2F4zbARCPU1Ro1J5JAbmi7Np2ruDKZExhK5i8ZKZuTx8",
+      "type": "Multikey",
+      "publicKeyMultibase": "z6MkvhwFmjnsSGbhtMduTX5PM8MdoaQURSk9rY1c3Q69Bu43",
       "privateKeyBytes": [
-        195,
-        106,
-        55,
-        97,
-        206,
-        223,
-        17,
-        20,
-        250,
-        159,
-        103,
-        22,
-        162,
-        236,
-        34,
         73,
-        153,
-        51,
-        177,
-        188,
-        251,
-        26,
-        116,
-        160,
-        167,
-        46,
+        62,
+        227,
+        4,
+        102,
+        232,
+        191,
+        113,
+        25,
+        147,
+        242,
+        165,
         59,
-        159,
-        142,
-        81,
-        131,
-        71
+        218,
+        41,
+        130,
+        143,
+        107,
+        36,
+        112,
+        254,
+        212,
+        238,
+        184,
+        220,
+        5,
+        89,
+        233,
+        89,
+        152,
+        202,
+        232
       ]
     },
     "key-2": {
       "id": "#key-2",
-      "type": "X25519KeyAgreementKey2020",
-      "publicKeyMultibase": "zAn8gFgoJdcSoDogvuvthGTSYEGMDSmiho7BF7bVnnync",
+      "type": "Multikey",
+      "publicKeyMultibase": "z6LSjjKGTnFc4E4M2vnFBZYtp4nZg5SbqLtvNeSNobJ63ZEf",
       "privateKeyBytes": [
-        45,
-        80,
-        113,
-        104,
-        170,
-        113,
-        114,
-        93,
-        125,
-        243,
-        242,
-        40,
-        14,
-        254,
-        125,
-        45,
-        166,
-        193,
-        244,
-        184,
-        4,
+        141,
         211,
-        102,
-        125,
-        219,
-        144,
+        61,
+        166,
+        2,
+        158,
+        78,
+        71,
+        59,
+        68,
+        49,
+        32,
+        167,
+        21,
+        154,
+        79,
+        0,
+        201,
+        191,
+        244,
+        249,
+        204,
+        150,
+        206,
+        185,
         127,
-        13,
-        65,
-        88,
-        57,
-        63
+        99,
+        175,
+        138,
+        167,
+        47,
+        176
       ]
     }
   },
-  "createdAt": "2025-10-14T23:19:20.601Z"
+  "createdAt": "2025-10-16T17:50:55.341Z"
 }

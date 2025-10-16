@@ -8,6 +8,8 @@ const base58btc = 'z'
 
 // Multicodec constants
 const json = 0x0200
+const ed25519_pub = 0xed
+const x25519_pub = 0xec
 
 // Multihash constants
 const sha2_256 = 0x12
@@ -19,6 +21,26 @@ const sha2_bytes_256 = 0x20
 export function toMultibaseB58(input) {
   const encoded = bs58.encode(input)
   return `${base58btc}${encoded}`
+}
+
+/**
+ * Encodes an Ed25519 public key with multicodec prefix for Multikey format.
+ */
+export function toMultikeyEd25519(publicKey) {
+  const bytes = new Uint8Array(2 + publicKey.length)
+  varint.encode(ed25519_pub, bytes, 0)
+  bytes.set(publicKey, varint.encode.bytes)
+  return toMultibaseB58(bytes)
+}
+
+/**
+ * Encodes an X25519 public key with multicodec prefix for Multikey format.
+ */
+export function toMultikeyX25519(publicKey) {
+  const bytes = new Uint8Array(2 + publicKey.length)
+  varint.encode(x25519_pub, bytes, 0)
+  bytes.set(publicKey, varint.encode.bytes)
+  return toMultibaseB58(bytes)
 }
 
 /**
@@ -116,11 +138,28 @@ function contextualizeDocument(doc) {
 
   // Contextualize verificationMethod
   if (doc.verificationMethod) {
-    doc.verificationMethod = doc.verificationMethod.map(vm => ({
-      ...vm,
-      id: vm.id.startsWith('#') ? `${id}${vm.id}` : vm.id,
-      controller: id
-    }))
+    doc.verificationMethod = doc.verificationMethod.map(vm => {
+      const contextualizedVm = {
+        ...vm,
+        id: vm.id.startsWith('#') ? `${id}${vm.id}` : vm.id,
+        controller: id
+      }
+
+      // Convert Multikey to specific types for didcomm-node compatibility
+      if (vm.type === 'Multikey' && vm.publicKeyMultibase) {
+        const keyBytes = fromMultibaseB58(vm.publicKeyMultibase)
+        const multicodec = varint.decode(keyBytes)
+
+        // Determine specific type based on multicodec prefix
+        if (multicodec === ed25519_pub) {
+          contextualizedVm.type = 'Ed25519VerificationKey2020'
+        } else if (multicodec === x25519_pub) {
+          contextualizedVm.type = 'X25519KeyAgreementKey2020'
+        }
+      }
+
+      return contextualizedVm
+    })
   }
 
   // Contextualize authentication references

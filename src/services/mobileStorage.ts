@@ -71,6 +71,21 @@ export function resetAllData() {
   })
 }
 
+// Update a message (e.g., to add response)
+export function updateMessage(messageId: string, updates: any) {
+  const messages = getMessages()
+  const index = messages.findIndex((m: any) => m.id === messageId)
+  if (index !== -1) {
+    messages[index] = { ...messages[index], ...updates }
+    localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(messages))
+  }
+}
+
+// Clear all messages
+export function clearMessages() {
+  localStorage.removeItem(STORAGE_KEYS.MESSAGES)
+}
+
 // Get storage stats
 export function getStorageStats() {
   return {

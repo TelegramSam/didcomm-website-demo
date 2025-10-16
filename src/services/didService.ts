@@ -1,6 +1,6 @@
 import initSqlJs from 'sql.js'
 import * as peer4 from '../lib/peer4'
-import { toMultibaseB58 } from '../lib/multiformats'
+import { toMultikeyEd25519, toMultikeyX25519 } from '../lib/multiformats'
 
 let db: any = null
 
@@ -94,13 +94,13 @@ export async function generateDID() {
     verificationMethod: [
       {
         id: '#key-1',
-        type: 'Ed25519VerificationKey2020',
-        publicKeyMultibase: toMultibaseB58(authKeys.publicKey)
+        type: 'Multikey',
+        publicKeyMultibase: toMultikeyEd25519(authKeys.publicKey)
       },
       {
         id: '#key-2',
-        type: 'X25519KeyAgreementKey2020',
-        publicKeyMultibase: toMultibaseB58(encKeys.publicKey)
+        type: 'Multikey',
+        publicKeyMultibase: toMultikeyX25519(encKeys.publicKey)
       }
     ],
     authentication: ['#key-1'],
@@ -124,14 +124,14 @@ export async function generateDID() {
   const privateKeyData: any = {
     'key-1': {
       id: '#key-1',
-      type: 'Ed25519VerificationKey2020',
-      publicKeyMultibase: toMultibaseB58(authKeys.publicKey),
+      type: 'Multikey',
+      publicKeyMultibase: toMultikeyEd25519(authKeys.publicKey),
       privateKeyBytes: Array.from(authKeys.privateKey)
     },
     'key-2': {
       id: '#key-2',
-      type: 'X25519KeyAgreementKey2020',
-      publicKeyMultibase: toMultibaseB58(encKeys.publicKey),
+      type: 'Multikey',
+      publicKeyMultibase: toMultikeyX25519(encKeys.publicKey),
       privateKeyBytes: Array.from(encKeys.privateKey)
     }
   }

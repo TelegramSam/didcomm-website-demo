@@ -120,6 +120,32 @@
               <pre>{{ formatJSON(mediatorConnection.mediationResponse) }}</pre>
             </div>
           </div>
+
+          <div class="test-section">
+            <h4>Test Connection DID Registration</h4>
+            <p class="test-description">
+              Generate a new connection-specific DID and register it with the mediator using the
+              keylist-update protocol.
+            </p>
+            <button
+              @click="handleTestConnectionDID"
+              :disabled="isTestingConnection"
+              class="test-button"
+            >
+              {{ isTestingConnection ? 'Testing...' : 'Generate & Register Test DID' }}
+            </button>
+            <div v-if="testResult" class="test-result" :class="testResult.success ? 'success' : 'error'">
+              <h5>{{ testResult.success ? 'Success' : 'Error' }}</h5>
+              <p v-if="testResult.did" class="test-did">
+                <strong>Generated DID:</strong><br />
+                <span class="monospace">{{ testResult.did }}</span>
+              </p>
+              <p v-if="testResult.message">{{ testResult.message }}</p>
+              <div v-if="testResult.response" class="json-viewer">
+                <pre>{{ formatJSON(testResult.response) }}</pre>
+              </div>
+            </div>
+          </div>
         </div>
         <div v-else class="no-data">
           <p>Not connected to a mediator.</p>
@@ -154,7 +180,12 @@
       </section>
 
       <section class="section message-log-section">
-        <h2>Message Log</h2>
+        <div class="section-header">
+          <h2>Message Log</h2>
+          <button @click="handleClearMessages" class="clear-messages-button" v-if="messages.length > 0">
+            Clear Messages
+          </button>
+        </div>
         <div v-if="messages.length > 0" class="message-log-container">
           <div
             v-for="msg in messages"
@@ -191,6 +222,21 @@
                 <pre>{{ formatJSON(msg.message) }}</pre>
               </details>
             </div>
+            <div v-if="msg.response" class="message-response">
+              <div class="response-header">
+                <span class="response-label">Response</span>
+                <span v-if="msg.responseStatus" class="status" :class="msg.responseStatus">
+                  {{ msg.responseStatus }}
+                </span>
+                <span v-if="msg.responseTimestamp" class="response-time">
+                  {{ formatTime(msg.responseTimestamp) }}
+                </span>
+              </div>
+              <details>
+                <summary>View Response</summary>
+                <pre>{{ formatJSON(msg.response) }}</pre>
+              </details>
+            </div>
           </div>
         </div>
         <div v-else class="no-data">
@@ -204,14 +250,25 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { getMobileDID, getConnections, getMessages } from '../services/mobileStorage'
-import { getMediatorStatus } from '../services/mediatorService'
+import {
+  getMobileDID,
+  getConnections,
+  getMessages,
+  clearMessages
+} from '../services/mobileStorage'
+import {
+  getMediatorStatus,
+  generateConnectionDID,
+  registerConnectionDIDWithMediator
+} from '../services/mediatorService'
 
 const router = useRouter()
 const mobileDID = ref(null)
 const mediatorConnection = ref(null)
 const connections = ref([])
 const messages = ref([])
+const isTestingConnection = ref(false)
+const testResult = ref(null)
 
 const goBack = () => {
   router.push('/mobile')
@@ -264,6 +321,53 @@ const loadData = () => {
   // Load messages in reverse chronological order (newest first)
   const allMessages = getMessages()
   messages.value = allMessages.reverse()
+}
+
+const handleTestConnectionDID = async () => {
+  isTestingConnection.value = true
+  testResult.value = null
+
+  try {
+    console.log('Generating test connection DID...')
+    const connectionDIDData = await generateConnectionDID()
+    console.log('Generated DID:', connectionDIDData.did)
+
+    console.log('Registering with mediator...')
+    const result = await registerConnectionDIDWithMediator(connectionDIDData.did)
+
+    if (result.success) {
+      testResult.value = {
+        success: true,
+        did: connectionDIDData.did,
+        message: 'Connection DID successfully registered with mediator!',
+        response: result.response
+      }
+    } else {
+      testResult.value = {
+        success: false,
+        did: connectionDIDData.did,
+        message: result.error || 'Failed to register DID with mediator'
+      }
+    }
+
+    // Reload data to show new messages
+    loadData()
+  } catch (error) {
+    console.error('Error testing connection DID:', error)
+    testResult.value = {
+      success: false,
+      message: `Error: ${error}`
+    }
+  } finally {
+    isTestingConnection.value = false
+  }
+}
+
+const handleClearMessages = () => {
+  if (confirm('Are you sure you want to clear all messages? This cannot be undone.')) {
+    clearMessages()
+    loadData()
+  }
 }
 
 onMounted(() => {
@@ -336,6 +440,34 @@ main {
   color: #333;
   border-bottom: 2px solid #007bff;
   padding-bottom: 0.5rem;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.section-header h2 {
+  margin: 0;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.clear-messages-button {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.clear-messages-button:hover {
+  background: #c82333;
 }
 
 .section h3 {
@@ -697,6 +829,59 @@ main {
   overflow-y: auto;
 }
 
+.message-response {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 2px solid #dee2e6;
+}
+
+.response-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.response-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #007bff;
+}
+
+.response-time {
+  font-size: 0.75rem;
+  color: #666;
+  margin-left: auto;
+}
+
+.message-response details {
+  margin-top: 0.5rem;
+}
+
+.message-response summary {
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: #007bff;
+  font-weight: 600;
+  padding: 0.25rem 0;
+}
+
+.message-response summary:hover {
+  color: #0056b3;
+}
+
+.message-response pre {
+  background: #e7f3ff;
+  border: 1px solid #007bff;
+  border-radius: 0.25rem;
+  padding: 0.75rem;
+  margin-top: 0.5rem;
+  overflow-x: auto;
+  font-size: 0.75rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
 .status.sent,
 .status.sent-encrypted {
   background: #d4edda;
@@ -716,5 +901,82 @@ main {
 .status.error {
   background: #f8d7da;
   color: #721c24;
+}
+
+.test-section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid #dee2e6;
+}
+
+.test-description {
+  font-size: 0.875rem;
+  color: #666;
+  margin-bottom: 1rem;
+}
+
+.test-button {
+  background: #17a2b8;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.test-button:hover:not(:disabled) {
+  background: #138496;
+}
+
+.test-button:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.test-result {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  border: 2px solid;
+}
+
+.test-result.success {
+  background: #d4edda;
+  border-color: #28a745;
+}
+
+.test-result.error {
+  background: #f8d7da;
+  border-color: #dc3545;
+}
+
+.test-result h5 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+  color: #333;
+}
+
+.test-result p {
+  margin: 0.5rem 0;
+  font-size: 0.875rem;
+  color: #333;
+}
+
+.test-did {
+  background: #f8f9fa;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  border-left: 3px solid #007bff;
+  margin-top: 0.5rem;
+}
+
+.test-result .json-viewer {
+  margin-top: 0.75rem;
 }
 </style>
