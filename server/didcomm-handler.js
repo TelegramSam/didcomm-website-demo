@@ -235,14 +235,10 @@ class ServerSecretsResolver {
             secretType = 'Ed25519VerificationKey2020'
             // Ed25519 private keys need public key concatenated
             const publicKeyBytes = new Uint8Array(keyData.publicKeyBytes)
-            console.log('Ed25519 private key length:', privateKeyBytes.length)
-            console.log('Ed25519 public key length:', publicKeyBytes.length)
             privateKeyMultibase = peer4.toMultikeyEd25519Private(privateKeyBytes, publicKeyBytes)
           } else if (keyData.id === '#key-2') {
             secretType = 'X25519KeyAgreementKey2020'
-            console.log('X25519 private key length:', privateKeyBytes.length)
             privateKeyMultibase = peer4.toMultikeyX25519Private(privateKeyBytes)
-            console.log('X25519 encoded private key:', privateKeyMultibase)
           }
         } else {
           privateKeyMultibase = peer4.toMultibaseB58(privateKeyBytes)
@@ -303,8 +299,6 @@ const didResolver = {
   knownDIDs: knownDIDs,
 
   async resolve(did) {
-    console.log('Resolving DID:', did)
-
     // Check if we have it locally
     if (this.knownDIDs[did]) {
       return this.knownDIDs[did]
@@ -337,21 +331,12 @@ const didResolver = {
     if (did.startsWith('did:peer:4') && did.includes(':z')) {
       try {
         const resolved = peer4.resolve(did, true)
-        console.log('Resolved did:peer:4 document:', JSON.stringify(resolved, null, 2))
-
-        if (resolved.verificationMethod) {
-          console.log('Available key IDs in resolved document:')
-          resolved.verificationMethod.forEach(vm => {
-            console.log(`  - ${vm.id} (type: ${vm.type})`)
-          })
-        }
 
         this.knownDIDs[did] = resolved
 
         if (resolved.alsoKnownAs) {
           resolved.alsoKnownAs.forEach(alias => {
             this.knownDIDs[alias] = resolved
-            console.log(`Cached DID document under alias: ${alias}`)
           })
         }
 
@@ -362,7 +347,6 @@ const didResolver = {
       }
     }
 
-    console.warn('Unable to resolve DID:', did)
     return null
   }
 }
@@ -409,18 +393,13 @@ const secretsResolver = {
   secrets: secretsMap,
 
   async get_secret(keyId) {
-    console.log('[START] get_secret called for key:', keyId)
-    console.log('Available secret keys:', Array.from(this.secrets.keys()))
-
     const secret = this.secrets.get(keyId)
 
     if (!secret) {
       console.warn('Secret not found for key:', keyId)
-      console.log('[END] get_secret returning null')
       return null
     }
 
-    console.log('[END] get_secret returning secret')
     return secret
   },
 
@@ -462,33 +441,8 @@ async function unpackMessage(packedMessage) {
     const messageStr =
       typeof packedMessage === 'string' ? packedMessage : JSON.stringify(packedMessage)
 
-    // Parse JWE to extract sender kid
-    try {
-      const jwe = JSON.parse(messageStr)
-      console.log('JWE protected header (base64):', jwe.protected)
-
-      // Decode protected header
-      if (jwe.protected) {
-        const protectedDecoded = JSON.parse(Buffer.from(jwe.protected, 'base64url').toString())
-        console.log('JWE protected header (decoded):', JSON.stringify(protectedDecoded, null, 2))
-        console.log('Sender kid (skid):', protectedDecoded.skid)
-      }
-
-      // Log recipient headers
-      if (jwe.recipients) {
-        jwe.recipients.forEach((r, i) => {
-          console.log(`Recipient ${i} header:`, JSON.stringify(r.header, null, 2))
-          console.log(`  - kid:`, r.header?.kid)
-        })
-      }
-    } catch (e) {
-      console.log('Could not parse JWE for logging:', e.message)
-    }
-
     // Unpack the encrypted message
     const result = await Message.unpack(messageStr, didResolver, secretsResolver, {})
-
-    console.log('Message unpacked successfully')
 
     return {
       message: result[0].as_value(),

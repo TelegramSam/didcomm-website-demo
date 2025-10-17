@@ -162,28 +162,8 @@ const sessionMessageQueue = new Map() // Maps session tokens to message queues
 // DIDComm message receiving endpoint
 app.post('/didcomm', async (req, res) => {
   console.log('=== Received DIDComm message on /didcomm ===')
-  console.log('Content-Type:', req.headers['content-type'])
-  console.log('Body type:', typeof req.body)
-  console.log('Body:', req.body)
 
   const packedMessage = req.body
-
-  console.log('Raw message:', JSON.stringify(packedMessage, null, 2))
-
-  // Parse the JWE to see its structure
-  try {
-    const parsed = JSON.parse(typeof packedMessage === 'string' ? packedMessage : JSON.stringify(packedMessage))
-    console.log('Parsed JWE structure:')
-    console.log('  - protected header:', parsed.protected)
-    console.log('  - recipients count:', parsed.recipients?.length)
-    if (parsed.recipients) {
-      parsed.recipients.forEach((r, i) => {
-        console.log(`  - recipient ${i} header:`, r.header)
-      })
-    }
-  } catch (e) {
-    console.log('Could not parse JWE structure:', e.message)
-  }
 
   try {
     // Step 1: Unpack (decrypt) the message
@@ -193,14 +173,30 @@ app.post('/didcomm', async (req, res) => {
       message = unpacked.message
       metadata = unpacked.metadata
 
+      // Helper function to truncate long-form did:peer:4 DIDs
+      const truncateDID = (did) => {
+        if (typeof did === 'string' && did.startsWith('did:peer:4') && did.includes(':z')) {
+          const parts = did.split(':')
+          return `${parts[0]}:${parts[1]}:${parts[2]}`
+        }
+        return did
+      }
+
+      // Create a display version with truncated DIDs
+      const displayMessage = {
+        ...message,
+        from: truncateDID(message.from),
+        to: Array.isArray(message.to) ? message.to.map(truncateDID) : truncateDID(message.to)
+      }
+
       console.log('=== Unpacked DIDComm message ===')
       console.log('Message type:', message.type)
       console.log('Message ID:', message.id)
-      console.log('From:', message.from)
-      console.log('To:', message.to)
+      console.log('From:', truncateDID(message.from))
+      console.log('To:', message.to ? (Array.isArray(message.to) ? message.to.map(truncateDID) : truncateDID(message.to)) : undefined)
       console.log('Encrypted:', metadata.encrypted)
       console.log('Authenticated:', metadata.authenticated)
-      console.log('Full message:', JSON.stringify(message, null, 2))
+      console.log('Full message:', JSON.stringify(displayMessage, null, 2))
     } catch (unpackError) {
       console.error('Failed to unpack message:', unpackError.message)
       return res.status(400).json({
