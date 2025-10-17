@@ -60,13 +60,14 @@ async function generateServerDID() {
   // Resolve to get the full DID document with id
   const resolvedDocument = peer4.resolve(longFormDid)
 
-  // Store private keys
+  // Store private keys (with public keys for Ed25519)
   const privateKeys = {
     'key-1': {
       id: '#key-1',
       type: 'Multikey',
       publicKeyMultibase: peer4.toMultikeyEd25519(authPublicKey),
-      privateKeyBytes: Array.from(authPrivateKey)
+      privateKeyBytes: Array.from(authPrivateKey),
+      publicKeyBytes: Array.from(authPublicKey)
     },
     'key-2': {
       id: '#key-2',
@@ -145,7 +146,30 @@ class ServerDIDResolver {
     // For did:peer:4, resolve from long-form DID
     if (did.startsWith('did:peer:4') && did.includes(':z')) {
       try {
-        return peer4.resolve(did)
+        // Resolve with long form preserved so key IDs match what's in the message
+        const resolved = peer4.resolve(did, true)
+        console.log('Resolved did:peer:4 document:', JSON.stringify(resolved, null, 2))
+
+        // Log all key IDs in the resolved document
+        if (resolved.verificationMethod) {
+          console.log('Available key IDs in resolved document:')
+          resolved.verificationMethod.forEach(vm => {
+            console.log(`  - ${vm.id} (type: ${vm.type})`)
+          })
+        }
+
+        // Cache the resolved document under the long form DID
+        this.knownDIDs[did] = resolved
+
+        // Also cache under short form and any alsoKnownAs
+        if (resolved.alsoKnownAs) {
+          resolved.alsoKnownAs.forEach(alias => {
+            this.knownDIDs[alias] = resolved
+            console.log(`Cached DID document under alias: ${alias}`)
+          })
+        }
+
+        return resolved
       } catch (error) {
         console.error('Failed to resolve did:peer:4:', error)
         return null
@@ -199,16 +223,38 @@ class ServerSecretsResolver {
     if (SERVER_DID_DATA.privateKeys) {
       for (const [keyName, keyData] of Object.entries(SERVER_DID_DATA.privateKeys)) {
         const privateKeyBytes = new Uint8Array(keyData.privateKeyBytes)
-        const privateKeyMultibase = peer4.toMultibaseB58(privateKeyBytes)
         const keyId = `${SERVER_DID_DATA.did}${keyData.id}`
+
+        // Convert Multikey type to specific type for didcomm-node compatibility
+        let secretType = keyData.type
+        let privateKeyMultibase
+
+        if (secretType === 'Multikey') {
+          // Determine type based on key ID - key-1 is Ed25519, key-2 is X25519
+          if (keyData.id === '#key-1') {
+            secretType = 'Ed25519VerificationKey2020'
+            // Ed25519 private keys need public key concatenated
+            const publicKeyBytes = new Uint8Array(keyData.publicKeyBytes)
+            console.log('Ed25519 private key length:', privateKeyBytes.length)
+            console.log('Ed25519 public key length:', publicKeyBytes.length)
+            privateKeyMultibase = peer4.toMultikeyEd25519Private(privateKeyBytes, publicKeyBytes)
+          } else if (keyData.id === '#key-2') {
+            secretType = 'X25519KeyAgreementKey2020'
+            console.log('X25519 private key length:', privateKeyBytes.length)
+            privateKeyMultibase = peer4.toMultikeyX25519Private(privateKeyBytes)
+            console.log('X25519 encoded private key:', privateKeyMultibase)
+          }
+        } else {
+          privateKeyMultibase = peer4.toMultibaseB58(privateKeyBytes)
+        }
 
         this.secrets.set(keyId, {
           id: keyId,
-          type: keyData.type,
+          type: secretType,
           privateKeyMultibase: privateKeyMultibase
         })
 
-        console.log('Initialized secrets resolver with key:', keyId)
+        console.log('Initialized secrets resolver with key:', keyId, 'type:', secretType)
       }
     }
   }
@@ -222,9 +268,11 @@ class ServerSecretsResolver {
     })
   }
 
-  // Get secret by key ID
-  async getSecret(keyId) {
+  // Get secret by key ID (interface method name with underscore)
+  async get_secret(keyId) {
     console.log('Retrieving secret for key:', keyId)
+    console.log('Available secret keys:', Array.from(this.secrets.keys()))
+
     const secret = this.secrets.get(keyId)
 
     if (!secret) {
@@ -235,15 +283,161 @@ class ServerSecretsResolver {
     return secret
   }
 
-  // Get all secret key IDs
-  async getSecretKeyIds() {
-    return Array.from(this.secrets.keys())
+  // Get all secret key IDs (interface method name with underscore)
+  async find_secrets(secretIds) {
+    const found = []
+    for (const secretId of secretIds) {
+      if (this.secrets.has(secretId)) {
+        found.push(secretId)
+      }
+    }
+    return found
   }
 }
 
-// Create global instances
-const didResolver = new ServerDIDResolver()
-const secretsResolver = new ServerSecretsResolver()
+// Create resolver as plain object instead of class instance
+const knownDIDs = {}
+knownDIDs[SERVER_DID_DATA.did] = SERVER_DID_DATA.didDocument
+
+const didResolver = {
+  knownDIDs: knownDIDs,
+
+  async resolve(did) {
+    console.log('Resolving DID:', did)
+
+    // Check if we have it locally
+    if (this.knownDIDs[did]) {
+      return this.knownDIDs[did]
+    }
+
+    // For did:key, we can resolve it locally
+    if (did.startsWith('did:key:')) {
+      const keyId = did.replace('did:key:', '')
+      const publicKeyBytes = bs58.decode(keyId.substring(1))
+
+      return {
+        '@context': [
+          'https://www.w3.org/ns/did/v1',
+          'https://w3id.org/security/suites/x25519-2020/v1'
+        ],
+        id: did,
+        verificationMethod: [
+          {
+            id: `${did}#${keyId}`,
+            type: 'X25519KeyAgreementKey2020',
+            controller: did,
+            publicKeyMultibase: keyId
+          }
+        ],
+        keyAgreement: [`${did}#${keyId}`]
+      }
+    }
+
+    // For did:peer:4, resolve from long-form DID
+    if (did.startsWith('did:peer:4') && did.includes(':z')) {
+      try {
+        const resolved = peer4.resolve(did, true)
+        console.log('Resolved did:peer:4 document:', JSON.stringify(resolved, null, 2))
+
+        if (resolved.verificationMethod) {
+          console.log('Available key IDs in resolved document:')
+          resolved.verificationMethod.forEach(vm => {
+            console.log(`  - ${vm.id} (type: ${vm.type})`)
+          })
+        }
+
+        this.knownDIDs[did] = resolved
+
+        if (resolved.alsoKnownAs) {
+          resolved.alsoKnownAs.forEach(alias => {
+            this.knownDIDs[alias] = resolved
+            console.log(`Cached DID document under alias: ${alias}`)
+          })
+        }
+
+        return resolved
+      } catch (error) {
+        console.error('Failed to resolve did:peer:4:', error)
+        return null
+      }
+    }
+
+    console.warn('Unable to resolve DID:', did)
+    return null
+  }
+}
+
+// Create secrets resolver as plain object
+const secretsMap = new Map()
+
+// Add server's private keys
+if (SERVER_DID_DATA.privateKeys) {
+  for (const [keyName, keyData] of Object.entries(SERVER_DID_DATA.privateKeys)) {
+    const privateKeyBytes = new Uint8Array(keyData.privateKeyBytes)
+    const keyId = `${SERVER_DID_DATA.did}${keyData.id}`
+
+    // Convert Multikey type to specific type for didcomm-node compatibility
+    let secretType = keyData.type
+    let privateKeyMultibase
+
+    if (secretType === 'Multikey') {
+      // Determine type based on key ID - key-1 is Ed25519, key-2 is X25519
+      if (keyData.id === '#key-1') {
+        secretType = 'Ed25519VerificationKey2020'
+        // Ed25519 private keys need public key concatenated
+        const publicKeyBytes = new Uint8Array(keyData.publicKeyBytes)
+        privateKeyMultibase = peer4.toMultikeyEd25519Private(privateKeyBytes, publicKeyBytes)
+      } else if (keyData.id === '#key-2') {
+        secretType = 'X25519KeyAgreementKey2020'
+        privateKeyMultibase = peer4.toMultikeyX25519Private(privateKeyBytes)
+      }
+    } else {
+      privateKeyMultibase = peer4.toMultibaseB58(privateKeyBytes)
+    }
+
+    secretsMap.set(keyId, {
+      id: keyId,
+      type: secretType,
+      privateKeyMultibase: privateKeyMultibase
+    })
+
+    console.log('Initialized secrets resolver with key:', keyId, 'type:', secretType)
+  }
+}
+
+const secretsResolver = {
+  secrets: secretsMap,
+
+  async get_secret(keyId) {
+    console.log('[START] get_secret called for key:', keyId)
+    console.log('Available secret keys:', Array.from(this.secrets.keys()))
+
+    const secret = this.secrets.get(keyId)
+
+    if (!secret) {
+      console.warn('Secret not found for key:', keyId)
+      console.log('[END] get_secret returning null')
+      return null
+    }
+
+    console.log('[END] get_secret returning secret')
+    return secret
+  },
+
+  async find_secrets(secretIds) {
+    const found = []
+    for (const secretId of secretIds) {
+      if (this.secrets.has(secretId)) {
+        found.push(secretId)
+      }
+    }
+    return found
+  }
+}
+
+// Keep class instances for compatibility with existing code
+const didResolverInstance = new ServerDIDResolver()
+const secretsResolverInstance = new ServerSecretsResolver()
 
 // Unpack (decrypt) a DIDComm message
 async function unpackMessage(packedMessage) {
@@ -267,6 +461,29 @@ async function unpackMessage(packedMessage) {
     // Convert to string if needed
     const messageStr =
       typeof packedMessage === 'string' ? packedMessage : JSON.stringify(packedMessage)
+
+    // Parse JWE to extract sender kid
+    try {
+      const jwe = JSON.parse(messageStr)
+      console.log('JWE protected header (base64):', jwe.protected)
+
+      // Decode protected header
+      if (jwe.protected) {
+        const protectedDecoded = JSON.parse(Buffer.from(jwe.protected, 'base64url').toString())
+        console.log('JWE protected header (decoded):', JSON.stringify(protectedDecoded, null, 2))
+        console.log('Sender kid (skid):', protectedDecoded.skid)
+      }
+
+      // Log recipient headers
+      if (jwe.recipients) {
+        jwe.recipients.forEach((r, i) => {
+          console.log(`Recipient ${i} header:`, JSON.stringify(r.header, null, 2))
+          console.log(`  - kid:`, r.header?.kid)
+        })
+      }
+    } catch (e) {
+      console.log('Could not parse JWE for logging:', e.message)
+    }
 
     // Unpack the encrypted message
     const result = await Message.unpack(messageStr, didResolver, secretsResolver, {})
@@ -315,5 +532,7 @@ export {
   unpackMessage,
   packMessage,
   ServerDIDResolver,
-  ServerSecretsResolver
+  ServerSecretsResolver,
+  didResolverInstance,
+  secretsResolverInstance
 }

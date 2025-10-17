@@ -170,6 +170,21 @@ app.post('/didcomm', async (req, res) => {
 
   console.log('Raw message:', JSON.stringify(packedMessage, null, 2))
 
+  // Parse the JWE to see its structure
+  try {
+    const parsed = JSON.parse(typeof packedMessage === 'string' ? packedMessage : JSON.stringify(packedMessage))
+    console.log('Parsed JWE structure:')
+    console.log('  - protected header:', parsed.protected)
+    console.log('  - recipients count:', parsed.recipients?.length)
+    if (parsed.recipients) {
+      parsed.recipients.forEach((r, i) => {
+        console.log(`  - recipient ${i} header:`, r.header)
+      })
+    }
+  } catch (e) {
+    console.log('Could not parse JWE structure:', e.message)
+  }
+
   try {
     // Step 1: Unpack (decrypt) the message
     let message, metadata

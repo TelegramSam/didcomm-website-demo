@@ -10,6 +10,8 @@ const base58btc = 'z'
 const json = 0x0200
 const ed25519_pub = 0xed
 const x25519_pub = 0xec
+const ed25519_priv = 0x1300
+const x25519_priv = 0x1302
 
 // Multihash constants
 const sha2_256 = 0x12
@@ -40,6 +42,35 @@ export function toMultikeyX25519(publicKey) {
   const bytes = new Uint8Array(2 + publicKey.length)
   varint.encode(x25519_pub, bytes, 0)
   bytes.set(publicKey, varint.encode.bytes)
+  return toMultibaseB58(bytes)
+}
+
+/**
+ * Encodes an Ed25519 private key with multicodec prefix.
+ */
+export function toMultikeyEd25519Private(privateKey, publicKey) {
+  // For Ed25519, concatenate private key (32 bytes) + public key (32 bytes) = 64 bytes
+  const combined = new Uint8Array(privateKey.length + publicKey.length)
+  combined.set(privateKey, 0)
+  combined.set(publicKey, privateKey.length)
+
+  // Calculate varint size for ed25519_priv (0x1300)
+  const varintSize = varint.encodingLength(ed25519_priv)
+  const bytes = new Uint8Array(varintSize + combined.length)
+  varint.encode(ed25519_priv, bytes, 0)
+  bytes.set(combined, varint.encode.bytes)
+  return toMultibaseB58(bytes)
+}
+
+/**
+ * Encodes an X25519 private key with multicodec prefix.
+ */
+export function toMultikeyX25519Private(privateKey) {
+  // Calculate varint size for x25519_priv (0x1302)
+  const varintSize = varint.encodingLength(x25519_priv)
+  const bytes = new Uint8Array(varintSize + privateKey.length)
+  varint.encode(x25519_priv, bytes, 0)
+  bytes.set(privateKey, varint.encode.bytes)
   return toMultibaseB58(bytes)
 }
 
@@ -96,8 +127,10 @@ export function encode(inputDocument) {
 
 /**
  * Resolves a long-form did:peer:4 string into a DID document.
+ * By default, uses the short form as the document ID.
+ * Set preserveLongForm to true to keep the long form as the ID.
  */
-export function resolve(longFormDid) {
+export function resolve(longFormDid, preserveLongForm = false) {
   const parts = longFormDid.split(':')
   if (parts.length < 4 || parts[0] !== 'did' || parts[1] !== 'peer' || !parts[2].startsWith('4')) {
     throw new Error('Invalid did:peer:4 format')
@@ -107,7 +140,13 @@ export function resolve(longFormDid) {
   const document = decodeDocument(encodedDoc)
 
   const shortForm = `${parts[0]}:${parts[1]}:${parts[2]}`
-  document.id = shortForm
+  document.id = preserveLongForm ? longFormDid : shortForm
+
+  // Add alsoKnownAs with the other form
+  if (!document.alsoKnownAs) {
+    document.alsoKnownAs = []
+  }
+  document.alsoKnownAs.push(preserveLongForm ? shortForm : longFormDid)
 
   // Contextualize the document
   return contextualizeDocument(document)

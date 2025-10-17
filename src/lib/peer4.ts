@@ -7,6 +7,8 @@ const json = 0x0200;
 const sha2_256 = 0x12;
 const sha2_bytes_256 = 0x20;
 const base58btc = "z";
+const ed25519_pub = 0xed;
+const x25519_pub = 0xec;
 const B58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 export const LONG_RE = new RegExp(`^did:peer:4zQm[${B58}]{44}:z[${B58}]{6,}$`)
 export const SHORT_RE = new RegExp(`^did:peer:4zQm[${B58}]{44}$`)
@@ -163,6 +165,20 @@ function contextualizeDocument(did: string, document: Document): Document {
     if (vm.controller === undefined) {
       vm.controller = did
     }
+
+    // Convert Multikey to specific types for didcomm-node compatibility
+    if (vm.type === 'Multikey' && vm.publicKeyMultibase) {
+      const keyBytes = fromMultibaseB58(vm.publicKeyMultibase);
+      const multicodec = varint.decode(keyBytes);
+
+      // Determine specific type based on multicodec prefix
+      if (multicodec === ed25519_pub) {
+        vm.type = 'Ed25519VerificationKey2020';
+      } else if (multicodec === x25519_pub) {
+        vm.type = 'X25519KeyAgreementKey2020';
+      }
+    }
+
     return vm
   })
 
