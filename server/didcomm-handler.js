@@ -8,6 +8,7 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import * as peer4 from './peer4.js'
+import * as peer2 from './peer2.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -327,6 +328,18 @@ const didResolver = {
       }
     }
 
+    // For did:peer:2, resolve from the encoded DID
+    if (did.startsWith('did:peer:2')) {
+      try {
+        const resolved = peer2.resolve(did)
+        this.knownDIDs[did] = resolved
+        return resolved
+      } catch (error) {
+        console.error('Failed to resolve did:peer:2:', error)
+        return null
+      }
+    }
+
     // For did:peer:4, resolve from long-form DID
     if (did.startsWith('did:peer:4') && did.includes(':z')) {
       try {
@@ -358,7 +371,7 @@ const secretsMap = new Map()
 if (SERVER_DID_DATA.privateKeys) {
   for (const [keyName, keyData] of Object.entries(SERVER_DID_DATA.privateKeys)) {
     const privateKeyBytes = new Uint8Array(keyData.privateKeyBytes)
-    const keyId = `${SERVER_DID_DATA.did}${keyData.id}`
+    const longFormKeyId = `${SERVER_DID_DATA.did}${keyData.id}`
 
     // Convert Multikey type to specific type for didcomm-node compatibility
     let secretType = keyData.type
@@ -379,13 +392,27 @@ if (SERVER_DID_DATA.privateKeys) {
       privateKeyMultibase = peer4.toMultibaseB58(privateKeyBytes)
     }
 
-    secretsMap.set(keyId, {
-      id: keyId,
+    const secret = {
+      id: longFormKeyId,
       type: secretType,
       privateKeyMultibase: privateKeyMultibase
-    })
+    }
 
-    console.log('Initialized secrets resolver with key:', keyId, 'type:', secretType)
+    // Store under long-form key ID
+    secretsMap.set(longFormKeyId, secret)
+
+    // Also store under short-form key ID (extract short form from long form)
+    if (SERVER_DID_DATA.did.includes(':z')) {
+      const shortFormDid = SERVER_DID_DATA.did.split(':').slice(0, 3).join(':')
+      const shortFormKeyId = `${shortFormDid}${keyData.id}`
+      secretsMap.set(shortFormKeyId, {
+        ...secret,
+        id: shortFormKeyId
+      })
+      console.log('Initialized secrets resolver with keys:', longFormKeyId, 'and', shortFormKeyId)
+    } else {
+      console.log('Initialized secrets resolver with key:', longFormKeyId, 'type:', secretType)
+    }
   }
 }
 
@@ -458,11 +485,26 @@ async function unpackMessage(packedMessage) {
 async function packMessage(message, to, from = SERVER_DID_DATA.did, signFrom = null) {
   try {
     console.log('Packing message...')
+    console.log('  to:', to)
+    console.log('  from:', from)
+    console.log('  signFrom:', signFrom)
+
+    // Debug: Check what secrets we have
+    console.log('Available secrets:', Array.from(secretsResolver.secrets.keys()))
+
+    // Debug: Try to resolve the sender DID
+    const senderDoc = await didResolver.resolve(from)
+    console.log('Sender DID resolved:', senderDoc ? 'YES' : 'NO')
+    if (senderDoc && senderDoc.keyAgreement) {
+      console.log('Sender keyAgreement keys:', senderDoc.keyAgreement)
+    }
 
     // Create Message instance
     const msg = new Message(message)
 
     // Pack encrypted message
+    // to = recipient's DID (their public key will be used to encrypt)
+    // from = sender's DID (our private key will be used for authenticated encryption)
     const result = await msg.pack_encrypted(to, from, signFrom, didResolver, secretsResolver, {
       forward: false
     })
